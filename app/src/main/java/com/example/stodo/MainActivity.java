@@ -2,6 +2,10 @@ package com.example.stodo;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.EditText;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -57,11 +61,25 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
 
     private void setupFab() {
         FloatingActionButton fab = findViewById(R.id.fabAdd);
-        fab.setOnClickListener(v -> {
-            // For now, adding a dummy task. In a real app, show a dialog.
-            taskService.addTask("New Task " + (activeTasks.size() + 1));
-            refreshTasks();
-        });
+        fab.setOnClickListener(v -> showAddTaskDialog());
+    }
+
+    private void showAddTaskDialog() {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null);
+        EditText editText = dialogView.findViewById(R.id.editTextTaskTitle);
+
+        new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton("Save", (dialog, which) -> {
+                    String title = editText.getText().toString().trim();
+                    if (!title.isEmpty()) {
+                        taskService.addTask(title);
+                        refreshTasks();
+                    }
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .create()
+                .show();
     }
 
     private void refreshTasks() {
