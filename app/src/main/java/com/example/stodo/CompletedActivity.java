@@ -94,11 +94,8 @@ public class CompletedActivity extends AppCompatActivity implements TaskAdapter.
         }
         
         editText.setText(task.getTitle());
-        if (task.getUncheckTimestamp() < 0) {
-            editMinutes.setText(String.valueOf(-task.getUncheckTimestamp()));
-        } else if (task.getUncheckTimestamp() > 0 && task.isCompleted()) {
-            long remainingMins = (task.getUncheckTimestamp() - System.currentTimeMillis()) / 60000;
-            editMinutes.setText(String.valueOf(Math.max(1, remainingMins)));
+        if (task.getAutoUncheckMinutes() > 0) {
+            editMinutes.setText(String.valueOf(task.getAutoUncheckMinutes()));
         }
 
         new AlertDialog.Builder(this)
@@ -106,15 +103,17 @@ public class CompletedActivity extends AppCompatActivity implements TaskAdapter.
                 .setPositiveButton("Update", (dialog, which) -> {
                     String title = editText.getText().toString().trim();
                     if (!title.isEmpty()) {
-                        long uncheckTimestamp = 0;
+                        int autoUncheckMinutes = 0;
                         String minsStr = editMinutes.getText().toString().trim();
                         if (!minsStr.isEmpty()) {
                             try {
-                                uncheckTimestamp = -Long.parseLong(minsStr);
+                                autoUncheckMinutes = Integer.parseInt(minsStr);
                             } catch (NumberFormatException ignored) {}
                         }
-                        Task updatedTask = new Task(task.getId(), title, task.isCompleted(), uncheckTimestamp);
-                        taskService.updateTask(updatedTask);
+                        task.setTitle(title);
+                        task.setAutoUncheckMinutes(autoUncheckMinutes);
+                        task.setUncheckTimestamp(0); 
+                        taskService.updateTask(task);
                         refreshTasks();
                     }
                 })
@@ -135,15 +134,6 @@ public class CompletedActivity extends AppCompatActivity implements TaskAdapter.
 
     @Override
     public void onTaskStatusChanged(Task task) {
-        if (task.isCompleted() && task.getUncheckTimestamp() < 0) {
-            long minutes = -task.getUncheckTimestamp();
-            task.setUncheckTimestamp(System.currentTimeMillis() + (minutes * 60000));
-        } else if (!task.isCompleted()) {
-            // If it was a scheduled uncheck, reset it back to the negative duration
-            // This is a bit complex without knowing the original duration, 
-            // but my current logic stores it as negative if not active.
-            // For now, let's just update the status.
-        }
         taskService.updateTask(task);
         if (!task.isCompleted()) {
             refreshTasks();

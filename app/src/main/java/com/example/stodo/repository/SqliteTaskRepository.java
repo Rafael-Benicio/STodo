@@ -26,7 +26,8 @@ public class SqliteTaskRepository implements TaskRepository {
             String title = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TITLE));
             boolean completed = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPLETED)) == 1;
             long uncheckTimestamp = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP));
-            tasks.add(new Task(id, title, completed, uncheckTimestamp));
+            int autoUncheckMinutes = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES));
+            tasks.add(new Task(id, title, completed, autoUncheckMinutes, uncheckTimestamp));
         }
         cursor.close();
         return tasks;
@@ -39,6 +40,7 @@ public class SqliteTaskRepository implements TaskRepository {
         values.put(DatabaseHelper.COLUMN_TITLE, task.getTitle());
         values.put(DatabaseHelper.COLUMN_COMPLETED, task.isCompleted() ? 1 : 0);
         values.put(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP, task.getUncheckTimestamp());
+        values.put(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES, task.getAutoUncheckMinutes());
         db.insert(DatabaseHelper.TABLE_TASKS, null, values);
     }
 
@@ -49,6 +51,7 @@ public class SqliteTaskRepository implements TaskRepository {
         values.put(DatabaseHelper.COLUMN_TITLE, task.getTitle());
         values.put(DatabaseHelper.COLUMN_COMPLETED, task.isCompleted() ? 1 : 0);
         values.put(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP, task.getUncheckTimestamp());
+        values.put(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES, task.getAutoUncheckMinutes());
         db.update(DatabaseHelper.TABLE_TASKS, values, DatabaseHelper.COLUMN_ID + " = ?", new String[]{String.valueOf(task.getId())});
     }
 
