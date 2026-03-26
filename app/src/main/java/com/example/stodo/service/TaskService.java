@@ -6,8 +6,9 @@ import java.util.List;
 public interface TaskService {
     List<Task> getActiveTasks();
     List<Task> getCompletedTasks();
-    void addTask(String title);
+    void addTask(String title, long uncheckTimestamp);
     void updateTask(Task task);
     void deleteTask(int id);
     void deleteCompletedTasks();
+    void checkAndUncheckTasks();
 }

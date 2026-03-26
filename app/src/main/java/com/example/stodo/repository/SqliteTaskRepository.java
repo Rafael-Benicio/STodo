@@ -25,7 +25,8 @@ public class SqliteTaskRepository implements TaskRepository {
             int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
             String title = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TITLE));
             boolean completed = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPLETED)) == 1;
-            tasks.add(new Task(id, title, completed));
+            long uncheckTimestamp = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP));
+            tasks.add(new Task(id, title, completed, uncheckTimestamp));
         }
         cursor.close();
         return tasks;
@@ -37,6 +38,7 @@ public class SqliteTaskRepository implements TaskRepository {
         ContentValues values = new ContentValues();
         values.put(DatabaseHelper.COLUMN_TITLE, task.getTitle());
         values.put(DatabaseHelper.COLUMN_COMPLETED, task.isCompleted() ? 1 : 0);
+        values.put(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP, task.getUncheckTimestamp());
         db.insert(DatabaseHelper.TABLE_TASKS, null, values);
     }
 
@@ -46,6 +48,7 @@ public class SqliteTaskRepository implements TaskRepository {
         ContentValues values = new ContentValues();
         values.put(DatabaseHelper.COLUMN_TITLE, task.getTitle());
         values.put(DatabaseHelper.COLUMN_COMPLETED, task.isCompleted() ? 1 : 0);
+        values.put(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP, task.getUncheckTimestamp());
         db.update(DatabaseHelper.TABLE_TASKS, values, DatabaseHelper.COLUMN_ID + " = ?", new String[]{String.valueOf(task.getId())});
     }
 

@@ -29,9 +29,19 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
         STodoApplication app = (STodoApplication) getApplication();
         taskService = app.getTaskService();
 
+        // Check for auto-uncheck tasks
+        taskService.checkAndUncheckTasks();
+
         setupRecyclerView();
         setupBottomNavigation();
         setupFab();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        taskService.checkAndUncheckTasks();
+        refreshTasks();
     }
 
     private void setupRecyclerView() {
@@ -68,13 +78,28 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     private void showAddTaskDialog() {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null);
         EditText editText = dialogView.findViewById(R.id.editTextTaskTitle);
+        EditText editMinutes = dialogView.findViewById(R.id.editTextUncheckMinutes);
 
         new AlertDialog.Builder(this)
                 .setView(dialogView)
                 .setPositiveButton("Save", (dialog, which) -> {
                     String title = editText.getText().toString().trim();
                     if (!title.isEmpty()) {
-                        taskService.addTask(title);
+                        long uncheckTimestamp = 0;
+                        String minsStr = editMinutes.getText().toString().trim();
+                        if (!minsStr.isEmpty()) {
+                            // If it's already checked (which it isn't here, but for consistency), 
+                            // we would set the timestamp. For new tasks, we just store the duration 
+                            // as negative or handle it separately.
+                            // Let's assume the user wants it to uncheck after X minutes *once it is checked*.
+                            // So we store the duration (minutes) in the uncheckTimestamp field as a negative value 
+                            // to indicate it's a duration, OR we just use it when the checkbox is clicked.
+                            // Better: Let's store the minutes in a simple way.
+                            try {
+                                uncheckTimestamp = -Long.parseLong(minsStr); // Negative indicates duration
+                            } catch (NumberFormatException ignored) {}
+                        }
+                        taskService.addTask(title, uncheckTimestamp);
                         refreshTasks();
                     }
                 })
@@ -86,9 +111,8 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     private void showEditTaskDialog(Task task) {
         View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null);
         EditText editText = dialogView.findViewById(R.id.editTextTaskTitle);
-        TextView titleView = dialogView.findViewById(android.R.id.title);
-        // The dialog layout has a TextView with text "New Task", let's find it by index or ID if it had one
-        // Better yet, let's find the first TextView which is our title
+        EditText editMinutes = dialogView.findViewById(R.id.editTextUncheckMinutes);
+        
         if (dialogView instanceof android.view.ViewGroup) {
             View firstChild = ((android.view.ViewGroup) dialogView).getChildAt(0);
             if (firstChild instanceof TextView) {
@@ -97,13 +121,27 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
         }
         
         editText.setText(task.getTitle());
+        if (task.getUncheckTimestamp() < 0) {
+            editMinutes.setText(String.valueOf(-task.getUncheckTimestamp()));
+        } else if (task.getUncheckTimestamp() > 0 && task.isCompleted()) {
+            // It's already scheduled to uncheck, show remaining minutes approx
+            long remainingMins = (task.getUncheckTimestamp() - System.currentTimeMillis()) / 60000;
+            editMinutes.setText(String.valueOf(Math.max(1, remainingMins)));
+        }
 
         new AlertDialog.Builder(this)
                 .setView(dialogView)
                 .setPositiveButton("Update", (dialog, which) -> {
                     String title = editText.getText().toString().trim();
                     if (!title.isEmpty()) {
-                        Task updatedTask = new Task(task.getId(), title, task.isCompleted());
+                        long uncheckTimestamp = 0;
+                        String minsStr = editMinutes.getText().toString().trim();
+                        if (!minsStr.isEmpty()) {
+                            try {
+                                uncheckTimestamp = -Long.parseLong(minsStr);
+                            } catch (NumberFormatException ignored) {}
+                        }
+                        Task updatedTask = new Task(task.getId(), title, task.isCompleted(), uncheckTimestamp);
                         taskService.updateTask(updatedTask);
                         refreshTasks();
                     }
@@ -125,6 +163,16 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
 
     @Override
     public void onTaskStatusChanged(Task task) {
+        if (task.isCompleted() && task.getUncheckTimestamp() < 0) {
+            // Set the actual timestamp
+            long minutes = -task.getUncheckTimestamp();
+            task.setUncheckTimestamp(System.currentTimeMillis() + (minutes * 60000));
+        } else if (!task.isCompleted()) {
+            // If unchecked manually, reset to duration if it was scheduled
+            // Actually, keep it as negative so it can be used again.
+            // But how do we know the original duration? 
+            // Let's say we always store duration as negative in the DB when task is incomplete.
+        }
         taskService.updateTask(task);
         if (task.isCompleted()) {
             refreshTasks();

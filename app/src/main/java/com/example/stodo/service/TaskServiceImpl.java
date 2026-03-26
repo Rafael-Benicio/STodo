@@ -36,8 +36,8 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
-    public void addTask(String title) {
-        repository.add(new Task(nextId++, title, false));
+    public void addTask(String title, long uncheckTimestamp) {
+        repository.add(new Task(nextId++, title, false, uncheckTimestamp));
     }
 
     @Override
@@ -56,6 +56,19 @@ public class TaskServiceImpl implements TaskService {
         for (Task task : all) {
             if (task.isCompleted()) {
                 repository.delete(task.getId());
+            }
+        }
+    }
+
+    @Override
+    public void checkAndUncheckTasks() {
+        long currentTime = System.currentTimeMillis();
+        List<Task> all = repository.getAll();
+        for (Task task : all) {
+            if (task.isCompleted() && task.getUncheckTimestamp() > 0 && currentTime >= task.getUncheckTimestamp()) {
+                task.setCompleted(false);
+                task.setUncheckTimestamp(0);
+                repository.update(task);
             }
         }
     }
