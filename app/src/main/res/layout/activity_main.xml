@@ -16,7 +16,7 @@
         app:layout_constraintTop_toTopOf="parent"
         app:menu="@menu/tasks_top_menu"
         app:title="@string/app_name"
-        app:titleTextColor="@android:color/white" />
+        app:titleTextColor="?attr/colorOnPrimary" />
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/recyclerViewTasks"
