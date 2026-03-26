@@ -1,7 +1,7 @@
 package com.example.stodo;
 
 import android.app.Application;
-import com.example.stodo.repository.InMemoryTaskRepository;
+import com.example.stodo.repository.SqliteTaskRepository;
 import com.example.stodo.service.TaskService;
 import com.example.stodo.service.TaskServiceImpl;
 
@@ -11,7 +11,7 @@ public class STodoApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        taskService = new TaskServiceImpl(new InMemoryTaskRepository());
+        taskService = new TaskServiceImpl(new SqliteTaskRepository(this));
     }
 
     public TaskService getTaskService() {
