@@ -46,6 +46,11 @@ public class TaskServiceImpl implements TaskService {
     }
 
     @Override
+    public void deleteTask(int id) {
+        repository.delete(id);
+    }
+
+    @Override
     public void deleteCompletedTasks() {
         List<Task> all = repository.getAll();
         for (Task task : all) {

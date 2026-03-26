@@ -2,6 +2,11 @@ package com.example.stodo;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.EditText;
+import android.widget.TextView;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -67,6 +72,34 @@ public class CompletedActivity extends AppCompatActivity implements TaskAdapter.
         });
     }
 
+    private void showEditTaskDialog(Task task) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null);
+        EditText editText = dialogView.findViewById(R.id.editTextTaskTitle);
+        
+        if (dialogView instanceof android.view.ViewGroup) {
+            View firstChild = ((android.view.ViewGroup) dialogView).getChildAt(0);
+            if (firstChild instanceof TextView) {
+                ((TextView) firstChild).setText("Edit Task");
+            }
+        }
+        
+        editText.setText(task.getTitle());
+
+        new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton("Update", (dialog, which) -> {
+                    String title = editText.getText().toString().trim();
+                    if (!title.isEmpty()) {
+                        Task updatedTask = new Task(task.getId(), title, task.isCompleted());
+                        taskService.updateTask(updatedTask);
+                        refreshTasks();
+                    }
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .create()
+                .show();
+    }
+
     private void refreshTasks() {
         completedTasks.clear();
         completedTasks.addAll(taskService.getCompletedTasks());
@@ -75,15 +108,24 @@ public class CompletedActivity extends AppCompatActivity implements TaskAdapter.
 
     @Override
     public void onTaskClick(Task task) {
-        // Handle task click
     }
 
     @Override
     public void onTaskStatusChanged(Task task) {
         taskService.updateTask(task);
-        // If it was unchecked, it should disappear from this list
         if (!task.isCompleted()) {
             refreshTasks();
         }
+    }
+
+    @Override
+    public void onTaskEdit(Task task) {
+        showEditTaskDialog(task);
+    }
+
+    @Override
+    public void onTaskDelete(Task task) {
+        taskService.deleteTask(task.getId());
+        refreshTasks();
     }
 }

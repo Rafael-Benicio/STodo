@@ -8,5 +8,6 @@ public interface TaskService {
     List<Task> getCompletedTasks();
     void addTask(String title);
     void updateTask(Task task);
+    void deleteTask(int id);
     void deleteCompletedTasks();
 }

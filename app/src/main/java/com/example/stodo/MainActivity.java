@@ -5,6 +5,7 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.TextView;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -82,6 +83,36 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
                 .show();
     }
 
+    private void showEditTaskDialog(Task task) {
+        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null);
+        EditText editText = dialogView.findViewById(R.id.editTextTaskTitle);
+        TextView titleView = dialogView.findViewById(android.R.id.title);
+        // The dialog layout has a TextView with text "New Task", let's find it by index or ID if it had one
+        // Better yet, let's find the first TextView which is our title
+        if (dialogView instanceof android.view.ViewGroup) {
+            View firstChild = ((android.view.ViewGroup) dialogView).getChildAt(0);
+            if (firstChild instanceof TextView) {
+                ((TextView) firstChild).setText("Edit Task");
+            }
+        }
+        
+        editText.setText(task.getTitle());
+
+        new AlertDialog.Builder(this)
+                .setView(dialogView)
+                .setPositiveButton("Update", (dialog, which) -> {
+                    String title = editText.getText().toString().trim();
+                    if (!title.isEmpty()) {
+                        Task updatedTask = new Task(task.getId(), title, task.isCompleted());
+                        taskService.updateTask(updatedTask);
+                        refreshTasks();
+                    }
+                })
+                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
+                .create()
+                .show();
+    }
+
     private void refreshTasks() {
         activeTasks.clear();
         activeTasks.addAll(taskService.getActiveTasks());
@@ -90,15 +121,24 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
 
     @Override
     public void onTaskClick(Task task) {
-        // Handle task click (e.g., edit)
     }
 
     @Override
     public void onTaskStatusChanged(Task task) {
         taskService.updateTask(task);
-        // If it was checked, it should disappear from this list
         if (task.isCompleted()) {
             refreshTasks();
         }
+    }
+
+    @Override
+    public void onTaskEdit(Task task) {
+        showEditTaskDialog(task);
+    }
+
+    @Override
+    public void onTaskDelete(Task task) {
+        taskService.deleteTask(task.getId());
+        refreshTasks();
     }
 }
