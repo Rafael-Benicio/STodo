@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">STodo</string>
+    <string name="title_concluded">Concluded</string>
 </resources>
