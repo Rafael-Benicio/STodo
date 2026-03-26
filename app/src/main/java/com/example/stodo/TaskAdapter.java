@@ -11,6 +11,8 @@ import android.widget.PopupMenu;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
+import com.example.stodo.service.TaskService;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 
@@ -18,6 +20,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     private List<Task> tasks;
     private OnTaskClickListener listener;
+    private TaskService taskService;
     private Handler countdownHandler = new Handler(Looper.getMainLooper());
     private Runnable countdownRunnable = new Runnable() {
         @Override
@@ -34,9 +37,10 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         void onTaskDelete(Task task);
     }
 
-    public TaskAdapter(List<Task> tasks, OnTaskClickListener listener) {
+    public TaskAdapter(List<Task> tasks, OnTaskClickListener listener, TaskService taskService) {
         this.tasks = tasks;
         this.listener = listener;
+        this.taskService = taskService;
     }
 
     public void startCountdown() {
@@ -46,6 +50,26 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
 
     public void stopCountdown() {
         countdownHandler.removeCallbacks(countdownRunnable);
+    }
+
+    public void onItemMove(int fromPosition, int toPosition) {
+        if (fromPosition < toPosition) {
+            for (int i = fromPosition; i < toPosition; i++) {
+                Collections.swap(tasks, i, i + 1);
+            }
+        } else {
+            for (int i = fromPosition; i > toPosition; i--) {
+                Collections.swap(tasks, i, i - 1);
+            }
+        }
+        notifyItemMoved(fromPosition, toPosition);
+        
+        // Update positions in database
+        for (int i = 0; i < tasks.size(); i++) {
+            Task t = tasks.get(i);
+            t.setPosition(i);
+            taskService.updateTask(t);
+        }
     }
 
     @NonNull
@@ -61,7 +85,6 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         holder.title.setText(task.getTitle());
         holder.checkBox.setChecked(task.isCompleted());
 
-        // Countdown logic
         if (task.isCompleted() && task.getUncheckTimestamp() > 0) {
             long remainingMillis = task.getUncheckTimestamp() - System.currentTimeMillis();
             if (remainingMillis > 0) {

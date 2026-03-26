@@ -37,16 +37,21 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public void addTask(String title, int autoUncheckMinutes) {
-        repository.add(new Task(nextId++, title, false, autoUncheckMinutes, 0));
+        List<Task> allTasks = repository.getAll();
+        int maxPosition = -1;
+        for (Task t : allTasks) {
+            if (t.getPosition() > maxPosition) {
+                maxPosition = t.getPosition();
+            }
+        }
+        repository.add(new Task(nextId++, title, false, autoUncheckMinutes, 0, maxPosition + 1));
     }
 
     @Override
     public void updateTask(Task task) {
-        // If task was just marked as completed and has auto-uncheck enabled
         if (task.isCompleted() && task.getAutoUncheckMinutes() > 0 && task.getUncheckTimestamp() == 0) {
             task.setUncheckTimestamp(System.currentTimeMillis() + (long) task.getAutoUncheckMinutes() * 60000);
         } else if (!task.isCompleted()) {
-            // If task is not completed, reset timestamp but KEEP autoUncheckMinutes
             task.setUncheckTimestamp(0);
         }
         repository.update(task);

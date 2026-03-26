@@ -6,8 +6,10 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.EditText;
 import android.widget.TextView;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.stodo.service.TaskService;
@@ -41,13 +43,17 @@ public class CompletedActivity extends AppCompatActivity implements TaskAdapter.
         super.onResume();
         taskService.checkAndUncheckTasks();
         refreshTasks();
-        adapter.startCountdown();
+        if (adapter != null) {
+            adapter.startCountdown();
+        }
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        adapter.stopCountdown();
+        if (adapter != null) {
+            adapter.stopCountdown();
+        }
     }
 
     private void setupToolbar() {
@@ -65,9 +71,23 @@ public class CompletedActivity extends AppCompatActivity implements TaskAdapter.
     private void setupRecyclerView() {
         RecyclerView recyclerView = findViewById(R.id.recyclerViewCompleted);
         completedTasks = taskService.getCompletedTasks();
-        adapter = new TaskAdapter(completedTasks, this);
+        adapter = new TaskAdapter(completedTasks, this, taskService);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
+
+        ItemTouchHelper.Callback callback = new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
+                adapter.onItemMove(viewHolder.getAdapterPosition(), target.getAdapterPosition());
+                return true;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+            }
+        };
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(callback);
+        itemTouchHelper.attachToRecyclerView(recyclerView);
     }
 
     private void setupBottomNavigation() {

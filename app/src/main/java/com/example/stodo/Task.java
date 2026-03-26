@@ -6,17 +6,19 @@ public class Task {
     private boolean completed;
     private int autoUncheckMinutes; // 0 means disabled
     private long uncheckTimestamp; // Absolute epoch time when it should be unchecked
+    private int position; // For manual ordering
 
     public Task(int id, String title, boolean completed) {
-        this(id, title, completed, 0, 0);
+        this(id, title, completed, 0, 0, 0);
     }
 
-    public Task(int id, String title, boolean completed, int autoUncheckMinutes, long uncheckTimestamp) {
+    public Task(int id, String title, boolean completed, int autoUncheckMinutes, long uncheckTimestamp, int position) {
         this.id = id;
         this.title = title;
         this.completed = completed;
         this.autoUncheckMinutes = autoUncheckMinutes;
         this.uncheckTimestamp = uncheckTimestamp;
+        this.position = position;
     }
 
     public int getId() {
@@ -53,5 +55,13 @@ public class Task {
 
     public void setUncheckTimestamp(long uncheckTimestamp) {
         this.uncheckTimestamp = uncheckTimestamp;
+    }
+
+    public int getPosition() {
+        return position;
+    }
+
+    public void setPosition(int position) {
+        this.position = position;
     }
 }

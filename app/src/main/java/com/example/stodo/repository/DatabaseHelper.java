@@ -6,7 +6,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String DATABASE_NAME = "stodo.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     public static final String TABLE_TASKS = "tasks";
     public static final String COLUMN_ID = "id";
@@ -14,6 +14,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String COLUMN_COMPLETED = "completed";
     public static final String COLUMN_UNCHECK_TIMESTAMP = "uncheck_timestamp";
     public static final String COLUMN_AUTO_UNCHECK_MINUTES = "auto_uncheck_minutes";
+    public static final String COLUMN_POSITION = "position";
 
     private static final String TABLE_CREATE =
             "CREATE TABLE " + TABLE_TASKS + " (" +
@@ -21,7 +22,8 @@ public class DatabaseHelper extends SQLiteOpenHelper {
                     COLUMN_TITLE + " TEXT, " +
                     COLUMN_COMPLETED + " INTEGER, " +
                     COLUMN_UNCHECK_TIMESTAMP + " INTEGER DEFAULT 0, " +
-                    COLUMN_AUTO_UNCHECK_MINUTES + " INTEGER DEFAULT 0);";
+                    COLUMN_AUTO_UNCHECK_MINUTES + " INTEGER DEFAULT 0, " +
+                    COLUMN_POSITION + " INTEGER DEFAULT 0);";
 
     public DatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -39,6 +41,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         }
         if (oldVersion < 3) {
             db.execSQL("ALTER TABLE " + TABLE_TASKS + " ADD COLUMN " + COLUMN_AUTO_UNCHECK_MINUTES + " INTEGER DEFAULT 0;");
+        }
+        if (oldVersion < 4) {
+            db.execSQL("ALTER TABLE " + TABLE_TASKS + " ADD COLUMN " + COLUMN_POSITION + " INTEGER DEFAULT 0;");
         }
     }
 }
