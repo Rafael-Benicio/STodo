@@ -41,6 +41,13 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
         super.onResume();
         taskService.checkAndUncheckTasks();
         refreshTasks();
+        adapter.startCountdown();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        adapter.stopCountdown();
     }
 
     private void setupRecyclerView() {

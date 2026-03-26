@@ -1,5 +1,7 @@
 package com.example.stodo;
 
+import android.os.Handler;
+import android.os.Looper;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -10,11 +12,20 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 import java.util.List;
+import java.util.Locale;
 
 public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder> {
 
     private List<Task> tasks;
     private OnTaskClickListener listener;
+    private Handler countdownHandler = new Handler(Looper.getMainLooper());
+    private Runnable countdownRunnable = new Runnable() {
+        @Override
+        public void run() {
+            notifyDataSetChanged();
+            countdownHandler.postDelayed(this, 1000);
+        }
+    };
 
     public interface OnTaskClickListener {
         void onTaskClick(Task task);
@@ -26,6 +37,15 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
     public TaskAdapter(List<Task> tasks, OnTaskClickListener listener) {
         this.tasks = tasks;
         this.listener = listener;
+    }
+
+    public void startCountdown() {
+        countdownHandler.removeCallbacks(countdownRunnable);
+        countdownHandler.post(countdownRunnable);
+    }
+
+    public void stopCountdown() {
+        countdownHandler.removeCallbacks(countdownRunnable);
     }
 
     @NonNull
@@ -40,6 +60,22 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         Task task = tasks.get(position);
         holder.title.setText(task.getTitle());
         holder.checkBox.setChecked(task.isCompleted());
+
+        // Countdown logic
+        if (task.isCompleted() && task.getUncheckTimestamp() > 0) {
+            long remainingMillis = task.getUncheckTimestamp() - System.currentTimeMillis();
+            if (remainingMillis > 0) {
+                long totalSeconds = remainingMillis / 1000;
+                long minutes = totalSeconds / 60;
+                long seconds = totalSeconds % 60;
+                holder.countdown.setText(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds));
+                holder.countdown.setVisibility(View.VISIBLE);
+            } else {
+                holder.countdown.setVisibility(View.GONE);
+            }
+        } else {
+            holder.countdown.setVisibility(View.GONE);
+        }
 
         holder.itemView.setOnClickListener(v -> listener.onTaskClick(task));
         holder.checkBox.setOnClickListener(v -> {
@@ -74,12 +110,14 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         TextView title;
         CheckBox checkBox;
         ImageButton buttonMore;
+        TextView countdown;
 
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
             title = itemView.findViewById(R.id.textViewTaskTitle);
             checkBox = itemView.findViewById(R.id.checkBoxTask);
             buttonMore = itemView.findViewById(R.id.buttonMore);
+            countdown = itemView.findViewById(R.id.textViewCountdown);
         }
     }
 }

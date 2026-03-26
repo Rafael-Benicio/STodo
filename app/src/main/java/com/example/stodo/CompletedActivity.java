@@ -41,6 +41,13 @@ public class CompletedActivity extends AppCompatActivity implements TaskAdapter.
         super.onResume();
         taskService.checkAndUncheckTasks();
         refreshTasks();
+        adapter.startCountdown();
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        adapter.stopCountdown();
     }
 
     private void setupToolbar() {
