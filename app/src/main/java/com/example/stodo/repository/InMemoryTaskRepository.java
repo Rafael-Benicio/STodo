@@ -10,9 +10,9 @@ public class InMemoryTaskRepository implements TaskRepository {
 
     public InMemoryTaskRepository() {
         // Initial dummy data
-        tasks.add(new Task(nextId++, "Fazer compras", false));
-        tasks.add(new Task(nextId++, "Estudar Java", false));
-        tasks.add(new Task(nextId++, "Lavar o carro", true));
+        tasks.add(new Task(nextId++, "Fazer compras", false, 0, 0, 0, 0));
+        tasks.add(new Task(nextId++, "Estudar Java", false, 0, 0, 1, 0));
+        tasks.add(new Task(nextId++, "Lavar o carro", true, 0, 0, 2, 1));
     }
 
     @Override
@@ -39,5 +39,16 @@ public class InMemoryTaskRepository implements TaskRepository {
     @Override
     public void delete(int id) {
         tasks.removeIf(task -> task.getId() == id);
+    }
+
+    @Override
+    public int getMaxPosition() {
+        int max = -1;
+        for (Task t : tasks) {
+            if (t.getPosition() > max) {
+                max = t.getPosition();
+            }
+        }
+        return max;
     }
 }

@@ -29,7 +29,8 @@ public class SqliteTaskRepository implements TaskRepository {
             long uncheckTimestamp = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP));
             int autoUncheckMinutes = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES));
             int position = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_POSITION));
-            tasks.add(new Task(id, title, completed, autoUncheckMinutes, uncheckTimestamp, position));
+            int completionCount = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPLETION_COUNT));
+            tasks.add(new Task(id, title, completed, autoUncheckMinutes, uncheckTimestamp, position, completionCount));
         }
         cursor.close();
         return tasks;
@@ -44,6 +45,7 @@ public class SqliteTaskRepository implements TaskRepository {
         values.put(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP, task.getUncheckTimestamp());
         values.put(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES, task.getAutoUncheckMinutes());
         values.put(DatabaseHelper.COLUMN_POSITION, task.getPosition());
+        values.put(DatabaseHelper.COLUMN_COMPLETION_COUNT, task.getCompletionCount());
         db.insert(DatabaseHelper.TABLE_TASKS, null, values);
     }
 
@@ -56,6 +58,7 @@ public class SqliteTaskRepository implements TaskRepository {
         values.put(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP, task.getUncheckTimestamp());
         values.put(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES, task.getAutoUncheckMinutes());
         values.put(DatabaseHelper.COLUMN_POSITION, task.getPosition());
+        values.put(DatabaseHelper.COLUMN_COMPLETION_COUNT, task.getCompletionCount());
         db.update(DatabaseHelper.TABLE_TASKS, values, DatabaseHelper.COLUMN_ID + " = ?", new String[]{String.valueOf(task.getId())});
     }
 
@@ -63,5 +66,17 @@ public class SqliteTaskRepository implements TaskRepository {
     public void delete(int id) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         db.delete(DatabaseHelper.TABLE_TASKS, DatabaseHelper.COLUMN_ID + " = ?", new String[]{String.valueOf(id)});
+    }
+
+    @Override
+    public int getMaxPosition() {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.rawQuery("SELECT MAX(" + DatabaseHelper.COLUMN_POSITION + ") FROM " + DatabaseHelper.TABLE_TASKS, null);
+        int max = -1;
+        if (cursor.moveToFirst()) {
+            max = cursor.getInt(0);
+        }
+        cursor.close();
+        return max;
     }
 }

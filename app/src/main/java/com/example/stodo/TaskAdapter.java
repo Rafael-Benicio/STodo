@@ -1,7 +1,10 @@
 package com.example.stodo;
 
+import android.graphics.Color;
+import android.graphics.Typeface;
 import android.os.Handler;
 import android.os.Looper;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -85,20 +88,8 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         holder.title.setText(task.getTitle());
         holder.checkBox.setChecked(task.isCompleted());
 
-        if (task.isCompleted() && task.getUncheckTimestamp() > 0) {
-            long remainingMillis = task.getUncheckTimestamp() - System.currentTimeMillis();
-            if (remainingMillis > 0) {
-                long totalSeconds = remainingMillis / 1000;
-                long minutes = totalSeconds / 60;
-                long seconds = totalSeconds % 60;
-                holder.countdown.setText(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds));
-                holder.countdown.setVisibility(View.VISIBLE);
-            } else {
-                holder.countdown.setVisibility(View.GONE);
-            }
-        } else {
-            holder.countdown.setVisibility(View.GONE);
-        }
+        bindCountdown(holder.countdown, task);
+        bindCompletionCount(holder.completionCount, holder.title, task);
 
         holder.itemView.setOnClickListener(v -> listener.onTaskClick(task));
         holder.checkBox.setOnClickListener(v -> {
@@ -106,22 +97,63 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             listener.onTaskStatusChanged(task);
         });
 
-        holder.buttonMore.setOnClickListener(v -> {
-            PopupMenu popup = new PopupMenu(v.getContext(), v);
-            popup.inflate(R.menu.item_task_menu);
-            popup.setOnMenuItemClickListener(item -> {
-                int itemId = item.getItemId();
-                if (itemId == R.id.action_edit) {
-                    listener.onTaskEdit(task);
-                    return true;
-                } else if (itemId == R.id.action_delete) {
-                    listener.onTaskDelete(task);
-                    return true;
-                }
-                return false;
-            });
-            popup.show();
+        holder.buttonMore.setOnClickListener(v -> showPopupMenu(v, task));
+    }
+
+    private void bindCountdown(TextView textView, Task task) {
+        if (task.isCompleted() && task.getUncheckTimestamp() > 0) {
+            long remainingMillis = task.getUncheckTimestamp() - System.currentTimeMillis();
+            if (remainingMillis > 0) {
+                long totalSeconds = remainingMillis / 1000;
+                long minutes = totalSeconds / 60;
+                long seconds = totalSeconds % 60;
+                textView.setText(String.format(Locale.getDefault(), "%02d:%02d", minutes, seconds));
+                textView.setVisibility(View.VISIBLE);
+                return;
+            }
+        }
+        textView.setVisibility(View.GONE);
+    }
+
+    private void bindCompletionCount(TextView countView, TextView titleView, Task task) {
+        int count = task.getCompletionCount();
+        if (count > 0) {
+            countView.setText(String.format(Locale.getDefault(), "%dx", count));
+            countView.setVisibility(View.VISIBLE);
+        } else {
+            countView.setVisibility(View.GONE);
+        }
+        applyTaskStyle(titleView, count);
+    }
+
+    private void applyTaskStyle(TextView textView, int count) {
+        if (count >= 10) {
+            textView.setTypeface(null, Typeface.BOLD_ITALIC);
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        } else if (count >= 5) {
+            textView.setTypeface(null, Typeface.BOLD);
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
+        } else {
+            textView.setTypeface(null, Typeface.NORMAL);
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        }
+    }
+
+    private void showPopupMenu(View v, Task task) {
+        PopupMenu popup = new PopupMenu(v.getContext(), v);
+        popup.inflate(R.menu.item_task_menu);
+        popup.setOnMenuItemClickListener(item -> {
+            int itemId = item.getItemId();
+            if (itemId == R.id.action_edit) {
+                listener.onTaskEdit(task);
+                return true;
+            } else if (itemId == R.id.action_delete) {
+                listener.onTaskDelete(task);
+                return true;
+            }
+            return false;
         });
+        popup.show();
     }
 
     @Override
@@ -134,6 +166,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
         CheckBox checkBox;
         ImageButton buttonMore;
         TextView countdown;
+        TextView completionCount;
 
         public TaskViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -141,6 +174,7 @@ public class TaskAdapter extends RecyclerView.Adapter<TaskAdapter.TaskViewHolder
             checkBox = itemView.findViewById(R.id.checkBoxTask);
             buttonMore = itemView.findViewById(R.id.buttonMore);
             countdown = itemView.findViewById(R.id.textViewCountdown);
+            completionCount = itemView.findViewById(R.id.textViewCompletionCount);
         }
     }
 }

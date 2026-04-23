@@ -8,4 +8,5 @@ public interface TaskRepository {
     void add(Task task);
     void update(Task task);
     void delete(int id);
+    int getMaxPosition();
 }

@@ -3,6 +3,8 @@ package com.example.stodo.service;
 import com.example.stodo.Task;
 import com.example.stodo.repository.TaskRepository;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class TaskServiceImpl implements TaskService {
@@ -15,36 +17,29 @@ public class TaskServiceImpl implements TaskService {
 
     @Override
     public List<Task> getActiveTasks() {
-        List<Task> active = new ArrayList<>();
-        for (Task task : repository.getAll()) {
-            if (!task.isCompleted()) {
-                active.add(task);
-            }
-        }
-        return active;
+        return getFilteredAndSortedTasks(false);
     }
 
     @Override
     public List<Task> getCompletedTasks() {
-        List<Task> completed = new ArrayList<>();
+        return getFilteredAndSortedTasks(true);
+    }
+
+    private List<Task> getFilteredAndSortedTasks(boolean completedStatus) {
+        List<Task> filtered = new ArrayList<>();
         for (Task task : repository.getAll()) {
-            if (task.isCompleted()) {
-                completed.add(task);
+            if (task.isCompleted() == completedStatus) {
+                filtered.add(task);
             }
         }
-        return completed;
+        Collections.sort(filtered, Task.BY_PRIORITY);
+        return filtered;
     }
 
     @Override
     public void addTask(String title, int autoUncheckMinutes) {
-        List<Task> allTasks = repository.getAll();
-        int maxPosition = -1;
-        for (Task t : allTasks) {
-            if (t.getPosition() > maxPosition) {
-                maxPosition = t.getPosition();
-            }
-        }
-        repository.add(new Task(nextId++, title, false, autoUncheckMinutes, 0, maxPosition + 1));
+        int nextPosition = repository.getMaxPosition() + 1;
+        repository.add(new Task(nextId++, title, false, autoUncheckMinutes, 0, nextPosition, 0));
     }
 
     @Override
