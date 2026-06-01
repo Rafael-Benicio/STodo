@@ -7,9 +7,10 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import java.util.UUID;
+
 public class TaskServiceImpl implements TaskService {
     private final TaskRepository repository;
-    private int nextId = 100; // Just for new tasks in dummy impl
 
     public TaskServiceImpl(TaskRepository repository) {
         this.repository = repository;
@@ -28,7 +29,7 @@ public class TaskServiceImpl implements TaskService {
     private List<Task> getFilteredAndSortedTasks(boolean completedStatus) {
         List<Task> filtered = new ArrayList<>();
         for (Task task : repository.getAll()) {
-            if (task.isCompleted() == completedStatus) {
+            if (task.isCompleted() == completedStatus && !task.isDeleted()) {
                 filtered.add(task);
             }
         }
@@ -39,7 +40,8 @@ public class TaskServiceImpl implements TaskService {
     @Override
     public void addTask(String title, int autoUncheckMinutes) {
         int nextPosition = repository.getMaxPosition() + 1;
-        repository.add(new Task(nextId++, title, false, autoUncheckMinutes, 0, nextPosition, 0));
+        String uuid = UUID.randomUUID().toString();
+        repository.add(new Task(uuid, title, false, autoUncheckMinutes, 0, nextPosition, 0));
     }
 
     @Override
@@ -49,20 +51,28 @@ public class TaskServiceImpl implements TaskService {
         } else if (!task.isCompleted()) {
             task.setUncheckTimestamp(0);
         }
+        task.setUpdatedAt(System.currentTimeMillis());
         repository.update(task);
     }
 
     @Override
-    public void deleteTask(int id) {
-        repository.delete(id);
+    public void deleteTask(String id) {
+        Task task = repository.getById(id);
+        if (task != null) {
+            task.setDeleted(true);
+            task.setUpdatedAt(System.currentTimeMillis());
+            repository.update(task);
+        }
     }
 
     @Override
     public void deleteCompletedTasks() {
         List<Task> all = repository.getAll();
         for (Task task : all) {
-            if (task.isCompleted()) {
-                repository.delete(task.getId());
+            if (task.isCompleted() && !task.isDeleted()) {
+                task.setDeleted(true);
+                task.setUpdatedAt(System.currentTimeMillis());
+                repository.update(task);
             }
         }
     }
@@ -75,6 +85,7 @@ public class TaskServiceImpl implements TaskService {
             if (task.isCompleted() && task.getUncheckTimestamp() > 0 && currentTime >= task.getUncheckTimestamp()) {
                 task.setCompleted(false);
                 task.setUncheckTimestamp(0);
+                task.setUpdatedAt(System.currentTimeMillis());
                 repository.update(task);
             }
         }

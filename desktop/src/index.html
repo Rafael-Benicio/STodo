@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>STodo - Desktop Hub</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>STodo Desktop Hub</h1>
+            <div id="sync-status">Aguardando servidor...</div>
+        </header>
+
+        <main>
+            <section class="task-input">
+                <input type="text" id="taskTitle" placeholder="O que precisa ser feito?">
+                <button id="addBtn">Adicionar</button>
+            </section>
+
+            <section class="task-list">
+                <ul id="tasks">
+                    <!-- Tarefas aparecerão aqui -->
+                </ul>
+            </section>
+        </main>
+    </div>
+    <script src="renderer.js"></script>
+</body>
+</html>

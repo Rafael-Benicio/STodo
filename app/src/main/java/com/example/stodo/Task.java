@@ -1,5 +1,6 @@
 package com.example.stodo;
 
+import com.google.gson.annotations.SerializedName;
 import java.util.Comparator;
 
 public class Task {
@@ -9,19 +10,34 @@ public class Task {
         return Integer.compare(t1.getPosition(), t2.getPosition());
     };
 
-    private int id;
+    @SerializedName("id")
+    private String id;
+    @SerializedName("title")
     private String title;
+    @SerializedName("completed")
     private boolean completed;
+    @SerializedName("autoUncheckMinutes")
     private int autoUncheckMinutes; // 0 means disabled
+    @SerializedName("uncheckTimestamp")
     private long uncheckTimestamp; // Absolute epoch time when it should be unchecked
+    @SerializedName("position")
     private int position; // For manual ordering
+    @SerializedName("completionCount")
     private int completionCount;
+    @SerializedName("updatedAt")
+    private long updatedAt;
+    @SerializedName("isDeleted")
+    private boolean isDeleted;
 
-    public Task(int id, String title, boolean completed) {
-        this(id, title, completed, 0, 0, 0, 0);
+    public Task(String id, String title, boolean completed) {
+        this(id, title, completed, 0, 0, 0, 0, System.currentTimeMillis(), false);
     }
 
-    public Task(int id, String title, boolean completed, int autoUncheckMinutes, long uncheckTimestamp, int position, int completionCount) {
+    public Task(String id, String title, boolean completed, int autoUncheckMinutes, long uncheckTimestamp, int position, int completionCount) {
+        this(id, title, completed, autoUncheckMinutes, uncheckTimestamp, position, completionCount, System.currentTimeMillis(), false);
+    }
+
+    public Task(String id, String title, boolean completed, int autoUncheckMinutes, long uncheckTimestamp, int position, int completionCount, long updatedAt, boolean isDeleted) {
         this.id = id;
         this.title = title;
         this.completed = completed;
@@ -29,9 +45,11 @@ public class Task {
         this.uncheckTimestamp = uncheckTimestamp;
         this.position = position;
         this.completionCount = completionCount;
+        this.updatedAt = updatedAt;
+        this.isDeleted = isDeleted;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
@@ -84,5 +102,21 @@ public class Task {
 
     public void setCompletionCount(int completionCount) {
         this.completionCount = completionCount;
+    }
+
+    public long getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(long updatedAt) {
+        this.updatedAt = updatedAt;
+    }
+
+    public boolean isDeleted() {
+        return isDeleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        isDeleted = deleted;
     }
 }

@@ -1,3 +1,4 @@
+# Android
 *.iml
 .gradle
 /local.properties
@@ -7,9 +8,24 @@
 /.idea/workspace.xml
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
+/.idea/deploymentTargetSelector.xml
+/.idea/vcs.xml
+/.idea/runConfigurations.xml
 .DS_Store
 /build
 /captures
 .externalNativeBuild
 .cxx
 local.properties
+
+# Desktop
+desktop/node_modules/
+desktop/db/*.db
+desktop/db/*.db-journal
+desktop/dist/
+desktop/*.log
+
+# Logs and OS
+*.log
+.DS_Store
+Thumbs.db

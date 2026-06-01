@@ -6,6 +6,8 @@ espressoCore = "3.5.1"
 appcompat = "1.6.1"
 material = "1.10.0"
 constraintlayout = "2.1.4"
+gson = "2.10.1"
+volley = "1.2.1"
 
 [libraries]
 junit = { group = "junit", name = "junit", version.ref = "junit" }
@@ -14,6 +16,8 @@ espresso-core = { group = "androidx.test.espresso", name = "espresso-core", vers
 appcompat = { group = "androidx.appcompat", name = "appcompat", version.ref = "appcompat" }
 material = { group = "com.google.android.material", name = "material", version.ref = "material" }
 constraintlayout = { group = "androidx.constraintlayout", name = "constraintlayout", version.ref = "constraintlayout" }
+gson = { group = "com.google.code.gson", name = "gson", version.ref = "gson" }
+volley = { group = "com.android.volley", name = "volley", version.ref = "volley" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

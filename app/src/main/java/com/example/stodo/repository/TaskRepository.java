@@ -5,8 +5,9 @@ import java.util.List;
 
 public interface TaskRepository {
     List<Task> getAll();
+    Task getById(String id);
     void add(Task task);
     void update(Task task);
-    void delete(int id);
+    void delete(String id);
     int getMaxPosition();
 }

@@ -8,7 +8,7 @@ public interface TaskService {
     List<Task> getCompletedTasks();
     void addTask(String title, int autoUncheckMinutes);
     void updateTask(Task task);
-    void deleteTask(int id);
+    void deleteTask(String id);
     void deleteCompletedTasks();
     void checkAndUncheckTasks();
 }

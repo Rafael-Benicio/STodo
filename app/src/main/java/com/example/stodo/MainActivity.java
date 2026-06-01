@@ -13,47 +13,193 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 import com.example.stodo.service.TaskService;
+import com.example.stodo.sync.SyncManager;
+import com.google.android.material.appbar.MaterialToolbar;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import java.util.List;
 
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.widget.Toast;
+import com.example.stodo.repository.TaskRepository;
+import com.example.stodo.sync.NetworkServiceDiscovery;
+
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+
 public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTaskClickListener {
 
+    private static final int REQUEST_CODE_PERMISSIONS = 123;
+    private static final long AUTO_SYNC_INTERVAL = 5000; // 5 segundos
+
     private TaskService taskService;
+    private TaskRepository taskRepository;
     private TaskAdapter adapter;
     private List<Task> activeTasks;
+    
+    private STodoApplication app;
+    private boolean isAutoSyncEnabled = false;
+    private final Handler autoSyncHandler = new Handler(Looper.getMainLooper());
+    private final Runnable autoSyncRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (isAutoSyncEnabled && app.getServerHost() != null) {
+                performSync();
+            }
+            autoSyncHandler.postDelayed(this, AUTO_SYNC_INTERVAL);
+        }
+    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        Log.d("MainActivity", "### STODO INICIALIZADO - VERSÃO SYNC ###");
         setContentView(R.layout.activity_main);
 
-        STodoApplication app = (STodoApplication) getApplication();
+        // Carregar preferência salva
+        isAutoSyncEnabled = getSharedPreferences("SyncPrefs", MODE_PRIVATE).getBoolean("auto_sync", false);
+
+        MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        
+        // Inicializar estado do toggle no menu da Toolbar
+        MenuItem autoSyncItem = toolbar.getMenu().findItem(R.id.action_auto_sync);
+        if (autoSyncItem != null) {
+            autoSyncItem.setChecked(isAutoSyncEnabled);
+        }
+
+        toolbar.setOnMenuItemClickListener(item -> {
+            if (item.getItemId() == R.id.action_sync) {
+                performSync();
+                return true;
+            } else if (item.getItemId() == R.id.action_auto_sync) {
+                toggleAutoSync(item);
+                return true;
+            }
+            return false;
+        });
+
+        app = (STodoApplication) getApplication();
         taskService = app.getTaskService();
+        taskRepository = app.getTaskRepository();
 
         taskService.checkAndUncheckTasks();
-
+        
         setupRecyclerView();
         setupBottomNavigation();
         setupFab();
+
+        checkPermissionsAndStartDiscovery();
+    }
+
+    private void toggleAutoSync(MenuItem item) {
+        isAutoSyncEnabled = !isAutoSyncEnabled;
+        item.setChecked(isAutoSyncEnabled);
+        getSharedPreferences("SyncPrefs", MODE_PRIVATE).edit().putBoolean("auto_sync", isAutoSyncEnabled).apply();
+        
+        if (isAutoSyncEnabled) {
+            Toast.makeText(this, "Auto-Sync ativado", Toast.LENGTH_SHORT).show();
+            startAutoSync();
+        } else {
+            Toast.makeText(this, "Auto-Sync desativado", Toast.LENGTH_SHORT).show();
+            stopAutoSync();
+        }
+    }
+
+    private void startAutoSync() {
+        autoSyncHandler.removeCallbacks(autoSyncRunnable);
+        autoSyncHandler.postDelayed(autoSyncRunnable, AUTO_SYNC_INTERVAL);
+    }
+
+    private void stopAutoSync() {
+        autoSyncHandler.removeCallbacks(autoSyncRunnable);
+    }
+
+    private void checkPermissionsAndStartDiscovery() {
+        String permission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? 
+            Manifest.permission.NEARBY_WIFI_DEVICES : Manifest.permission.ACCESS_FINE_LOCATION;
+            
+        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{permission}, REQUEST_CODE_PERMISSIONS);
+        } else {
+            app.getNsd().startDiscovery();
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_CODE_PERMISSIONS && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            app.getNsd().startDiscovery();
+        }
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        getMenuInflater().inflate(R.menu.tasks_top_menu, menu);
+        MenuItem autoSyncItem = menu.findItem(R.id.action_auto_sync);
+        if (autoSyncItem != null) {
+            autoSyncItem.setChecked(isAutoSyncEnabled);
+        }
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        if (item.getItemId() == R.id.action_sync) {
+            performSync();
+            return true;
+        } else if (item.getItemId() == R.id.action_auto_sync) {
+            toggleAutoSync(item);
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    private void performSync() {
+        String host = app.getServerHost();
+        if (host == null) {
+            return;
+        }
+
+        app.getSyncManager().sync(host, app.getServerPort(), new SyncManager.SyncCallback() {
+            @Override
+            public void onSuccess() {
+                runOnUiThread(() -> refreshTasks());
+            }
+
+            @Override
+            public void onError(String message) {
+                Log.e("MainActivity", "Sync error: " + message);
+            }
+        });
+    }
+
+    private void triggerImmediateSync() {
+        if (isAutoSyncEnabled) {
+            performSync();
+        }
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        taskService.checkAndUncheckTasks();
         refreshTasks();
-        if (adapter != null) {
-            adapter.startCountdown();
-        }
+        if (adapter != null) adapter.startCountdown();
+        if (isAutoSyncEnabled) startAutoSync();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        if (adapter != null) {
-            adapter.stopCountdown();
-        }
+        stopAutoSync();
+        if (adapter != null) adapter.stopCountdown();
     }
 
     private void setupRecyclerView() {
@@ -67,6 +213,7 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
             @Override
             public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder target) {
                 adapter.onItemMove(viewHolder.getAdapterPosition(), target.getAdapterPosition());
+                triggerImmediateSync();
                 return true;
             }
 
@@ -74,98 +221,71 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
             }
         };
-        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(callback);
-        itemTouchHelper.attachToRecyclerView(recyclerView);
+        new ItemTouchHelper(callback).attachToRecyclerView(recyclerView);
     }
 
     private void setupBottomNavigation() {
         BottomNavigationView bottomNavigationView = findViewById(R.id.bottom_navigation);
         bottomNavigationView.setSelectedItemId(R.id.navigation_tasks);
-
         bottomNavigationView.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.navigation_tasks) {
-                return true;
-            } else if (itemId == R.id.navigation_completed) {
-                startActivity(new Intent(getApplicationContext(), CompletedActivity.class));
+            if (item.getItemId() == R.id.navigation_completed) {
+                startActivity(new Intent(this, CompletedActivity.class));
                 overridePendingTransition(0, 0);
                 finish();
                 return true;
             }
-            return false;
+            return item.getItemId() == R.id.navigation_tasks;
         });
     }
 
     private void setupFab() {
-        FloatingActionButton fab = findViewById(R.id.fabAdd);
-        fab.setOnClickListener(v -> showAddTaskDialog());
+        findViewById(R.id.fabAdd).setOnClickListener(v -> showAddTaskDialog());
     }
 
     private void showAddTaskDialog() {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null);
-        EditText editText = dialogView.findViewById(R.id.editTextTaskTitle);
-        EditText editMinutes = dialogView.findViewById(R.id.editTextUncheckMinutes);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null);
+        EditText titleEt = view.findViewById(R.id.editTextTaskTitle);
+        EditText minsEt = view.findViewById(R.id.editTextUncheckMinutes);
 
         new AlertDialog.Builder(this)
-                .setView(dialogView)
-                .setPositiveButton("Save", (dialog, which) -> {
-                    String title = editText.getText().toString().trim();
-                    if (!title.isEmpty()) {
-                        int autoUncheckMinutes = 0;
-                        String minsStr = editMinutes.getText().toString().trim();
-                        if (!minsStr.isEmpty()) {
-                            try {
-                                autoUncheckMinutes = Integer.parseInt(minsStr);
-                            } catch (NumberFormatException ignored) {}
-                        }
-                        taskService.addTask(title, autoUncheckMinutes);
-                        refreshTasks();
-                    }
-                })
-                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
-                .create()
-                .show();
+            .setView(view)
+            .setPositiveButton("Save", (d, w) -> {
+                String title = titleEt.getText().toString().trim();
+                if (!title.isEmpty()) {
+                    int mins = 0;
+                    try { mins = Integer.parseInt(minsEt.getText().toString()); } catch (Exception e) {}
+                    taskService.addTask(title, mins);
+                    refreshTasks();
+                    triggerImmediateSync();
+                }
+            })
+            .show();
     }
 
     private void showEditTaskDialog(Task task) {
-        View dialogView = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null);
-        EditText editText = dialogView.findViewById(R.id.editTextTaskTitle);
-        EditText editMinutes = dialogView.findViewById(R.id.editTextUncheckMinutes);
+        View view = LayoutInflater.from(this).inflate(R.layout.dialog_add_task, null);
+        EditText titleEt = view.findViewById(R.id.editTextTaskTitle);
+        EditText editMinutes = view.findViewById(R.id.editTextUncheckMinutes);
         
-        if (dialogView instanceof android.view.ViewGroup) {
-            View firstChild = ((android.view.ViewGroup) dialogView).getChildAt(0);
-            if (firstChild instanceof TextView) {
-                ((TextView) firstChild).setText("Edit Task");
-            }
-        }
-        
-        editText.setText(task.getTitle());
-        if (task.getAutoUncheckMinutes() > 0) {
-            editMinutes.setText(String.valueOf(task.getAutoUncheckMinutes()));
-        }
+        titleEt.setText(task.getTitle());
+        if (task.getAutoUncheckMinutes() > 0) editMinutes.setText(String.valueOf(task.getAutoUncheckMinutes()));
 
         new AlertDialog.Builder(this)
-                .setView(dialogView)
-                .setPositiveButton("Update", (dialog, which) -> {
-                    String title = editText.getText().toString().trim();
-                    if (!title.isEmpty()) {
-                        int autoUncheckMinutes = 0;
-                        String minsStr = editMinutes.getText().toString().trim();
-                        if (!minsStr.isEmpty()) {
-                            try {
-                                autoUncheckMinutes = Integer.parseInt(minsStr);
-                            } catch (NumberFormatException ignored) {}
-                        }
-                        task.setTitle(title);
-                        task.setAutoUncheckMinutes(autoUncheckMinutes);
-                        task.setUncheckTimestamp(0); 
-                        taskService.updateTask(task);
-                        refreshTasks();
-                    }
-                })
-                .setNegativeButton("Cancel", (dialog, which) -> dialog.dismiss())
-                .create()
-                .show();
+            .setView(view)
+            .setPositiveButton("Update", (d, w) -> {
+                String title = titleEt.getText().toString().trim();
+                if (!title.isEmpty()) {
+                    int mins = 0;
+                    try { mins = Integer.parseInt(editMinutes.getText().toString()); } catch (Exception e) {}
+                    task.setTitle(title);
+                    task.setAutoUncheckMinutes(mins);
+                    task.setUncheckTimestamp(0);
+                    taskService.updateTask(task);
+                    refreshTasks();
+                    triggerImmediateSync();
+                }
+            })
+            .show();
     }
 
     private void refreshTasks() {
@@ -175,25 +295,22 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     }
 
     @Override
-    public void onTaskClick(Task task) {
-    }
-
-    @Override
     public void onTaskStatusChanged(Task task) {
         taskService.updateTask(task);
-        if (task.isCompleted()) {
-            refreshTasks();
-        }
+        if (task.isCompleted()) refreshTasks();
+        triggerImmediateSync();
     }
 
     @Override
-    public void onTaskEdit(Task task) {
-        showEditTaskDialog(task);
-    }
+    public void onTaskEdit(Task task) { showEditTaskDialog(task); }
 
     @Override
     public void onTaskDelete(Task task) {
         taskService.deleteTask(task.getId());
         refreshTasks();
+        triggerImmediateSync();
     }
+
+    @Override
+    public void onTaskClick(Task task) {}
 }

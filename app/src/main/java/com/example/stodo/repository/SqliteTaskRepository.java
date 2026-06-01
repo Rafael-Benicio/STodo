@@ -23,29 +23,54 @@ public class SqliteTaskRepository implements TaskRepository {
         Cursor cursor = db.query(DatabaseHelper.TABLE_TASKS, null, null, null, null, null, DatabaseHelper.COLUMN_POSITION + " ASC");
 
         while (cursor.moveToNext()) {
-            int id = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
+            String id = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_ID));
             String title = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TITLE));
             boolean completed = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPLETED)) == 1;
             long uncheckTimestamp = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP));
             int autoUncheckMinutes = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES));
             int position = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_POSITION));
             int completionCount = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPLETION_COUNT));
-            tasks.add(new Task(id, title, completed, autoUncheckMinutes, uncheckTimestamp, position, completionCount));
+            long updatedAt = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UPDATED_AT));
+            boolean isDeleted = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_IS_DELETED)) == 1;
+            tasks.add(new Task(id, title, completed, autoUncheckMinutes, uncheckTimestamp, position, completionCount, updatedAt, isDeleted));
         }
         cursor.close();
         return tasks;
     }
 
     @Override
+    public Task getById(String id) {
+        SQLiteDatabase db = dbHelper.getReadableDatabase();
+        Cursor cursor = db.query(DatabaseHelper.TABLE_TASKS, null, DatabaseHelper.COLUMN_ID + " = ?", new String[]{id}, null, null, null);
+        Task task = null;
+        if (cursor.moveToFirst()) {
+            String title = cursor.getString(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_TITLE));
+            boolean completed = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPLETED)) == 1;
+            long uncheckTimestamp = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP));
+            int autoUncheckMinutes = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES));
+            int position = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_POSITION));
+            int completionCount = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_COMPLETION_COUNT));
+            long updatedAt = cursor.getLong(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_UPDATED_AT));
+            boolean isDeleted = cursor.getInt(cursor.getColumnIndexOrThrow(DatabaseHelper.COLUMN_IS_DELETED)) == 1;
+            task = new Task(id, title, completed, autoUncheckMinutes, uncheckTimestamp, position, completionCount, updatedAt, isDeleted);
+        }
+        cursor.close();
+        return task;
+    }
+
+    @Override
     public void add(Task task) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
         ContentValues values = new ContentValues();
+        values.put(DatabaseHelper.COLUMN_ID, task.getId());
         values.put(DatabaseHelper.COLUMN_TITLE, task.getTitle());
         values.put(DatabaseHelper.COLUMN_COMPLETED, task.isCompleted() ? 1 : 0);
         values.put(DatabaseHelper.COLUMN_UNCHECK_TIMESTAMP, task.getUncheckTimestamp());
         values.put(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES, task.getAutoUncheckMinutes());
         values.put(DatabaseHelper.COLUMN_POSITION, task.getPosition());
         values.put(DatabaseHelper.COLUMN_COMPLETION_COUNT, task.getCompletionCount());
+        values.put(DatabaseHelper.COLUMN_UPDATED_AT, task.getUpdatedAt());
+        values.put(DatabaseHelper.COLUMN_IS_DELETED, task.isDeleted() ? 1 : 0);
         db.insert(DatabaseHelper.TABLE_TASKS, null, values);
     }
 
@@ -59,13 +84,15 @@ public class SqliteTaskRepository implements TaskRepository {
         values.put(DatabaseHelper.COLUMN_AUTO_UNCHECK_MINUTES, task.getAutoUncheckMinutes());
         values.put(DatabaseHelper.COLUMN_POSITION, task.getPosition());
         values.put(DatabaseHelper.COLUMN_COMPLETION_COUNT, task.getCompletionCount());
-        db.update(DatabaseHelper.TABLE_TASKS, values, DatabaseHelper.COLUMN_ID + " = ?", new String[]{String.valueOf(task.getId())});
+        values.put(DatabaseHelper.COLUMN_UPDATED_AT, task.getUpdatedAt());
+        values.put(DatabaseHelper.COLUMN_IS_DELETED, task.isDeleted() ? 1 : 0);
+        db.update(DatabaseHelper.TABLE_TASKS, values, DatabaseHelper.COLUMN_ID + " = ?", new String[]{task.getId()});
     }
 
     @Override
-    public void delete(int id) {
+    public void delete(String id) {
         SQLiteDatabase db = dbHelper.getWritableDatabase();
-        db.delete(DatabaseHelper.TABLE_TASKS, DatabaseHelper.COLUMN_ID + " = ?", new String[]{String.valueOf(id)});
+        db.delete(DatabaseHelper.TABLE_TASKS, DatabaseHelper.COLUMN_ID + " = ?", new String[]{id});
     }
 
     @Override

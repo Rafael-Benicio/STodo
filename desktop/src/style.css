@@ -1,0 +1,113 @@
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: white;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+}
+
+.container {
+    width: 100%;
+    max-width: none; /* Remove o limite de 600px para ocupar a tela toda */
+    background: white;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+header {
+    background-color: #6200ee;
+    color: white;
+    padding: 20px;
+    text-align: center;
+}
+
+#sync-status {
+    font-size: 0.8em;
+    opacity: 0.8;
+}
+
+.task-input {
+    padding: 20px;
+    display: flex;
+    gap: 10px;
+    background-color: #f8f8f8;
+    border-bottom: 1px solid #eee;
+}
+
+.task-input input {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.task-input button {
+    padding: 10px 24px;
+    background-color: #6200ee;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.task-input button:hover {
+    background-color: #3700b3;
+}
+
+.task-list {
+    flex: 1;
+    padding: 20px;
+}
+
+ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+li {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+    gap: 15px;
+}
+
+li:hover {
+    background-color: #fafafa;
+}
+
+.task-title {
+    flex: 1;
+    font-size: 1.1rem;
+}
+
+.completed {
+    text-decoration: line-through;
+    color: #888;
+}
+
+button.delete-btn {
+    padding: 6px 12px;
+    background-color: #cf6679;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+}
+
+button.delete-btn:hover {
+    background-color: #b00020;
+}
+
+input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+}

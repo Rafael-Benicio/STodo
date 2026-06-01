@@ -4,20 +4,31 @@ import com.example.stodo.Task;
 import java.util.ArrayList;
 import java.util.List;
 
+import java.util.UUID;
+
 public class InMemoryTaskRepository implements TaskRepository {
     private List<Task> tasks = new ArrayList<>();
-    private int nextId = 1;
 
     public InMemoryTaskRepository() {
         // Initial dummy data
-        tasks.add(new Task(nextId++, "Fazer compras", false, 0, 0, 0, 0));
-        tasks.add(new Task(nextId++, "Estudar Java", false, 0, 0, 1, 0));
-        tasks.add(new Task(nextId++, "Lavar o carro", true, 0, 0, 2, 1));
+        tasks.add(new Task(UUID.randomUUID().toString(), "Fazer compras", false, 0, 0, 0, 0));
+        tasks.add(new Task(UUID.randomUUID().toString(), "Estudar Java", false, 0, 0, 1, 0));
+        tasks.add(new Task(UUID.randomUUID().toString(), "Lavar o carro", true, 0, 0, 2, 1));
     }
 
     @Override
     public List<Task> getAll() {
         return new ArrayList<>(tasks);
+    }
+
+    @Override
+    public Task getById(String id) {
+        for (Task t : tasks) {
+            if (t.getId().equals(id)) {
+                return t;
+            }
+        }
+        return null;
     }
 
     @Override
@@ -29,7 +40,7 @@ public class InMemoryTaskRepository implements TaskRepository {
     @Override
     public void update(Task task) {
         for (int i = 0; i < tasks.size(); i++) {
-            if (tasks.get(i).getId() == task.getId()) {
+            if (tasks.get(i).getId().equals(task.getId())) {
                 tasks.set(i, task);
                 return;
             }
@@ -37,8 +48,8 @@ public class InMemoryTaskRepository implements TaskRepository {
     }
 
     @Override
-    public void delete(int id) {
-        tasks.removeIf(task -> task.getId() == id);
+    public void delete(String id) {
+        tasks.removeIf(task -> task.getId().equals(id));
     }
 
     @Override

@@ -2,6 +2,16 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
     <item
+        android:id="@+id/action_sync"
+        android:icon="@android:drawable/stat_notify_sync"
+        android:title="Sincronizar"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/action_auto_sync"
+        android:title="Auto-Sync"
+        android:checkable="true"
+        app:showAsAction="never" />
+    <item
         android:id="@+id/action_search"
         android:icon="@android:drawable/ic_menu_search"
         android:title="Search"
