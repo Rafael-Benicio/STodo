@@ -23,7 +23,7 @@ db.serialize(() => {
 const TaskRepository = {
     getAll: () => {
         return new Promise((resolve, reject) => {
-            db.all("SELECT * FROM tasks WHERE is_deleted = 0 ORDER BY position ASC", [], (err, rows) => {
+            db.all("SELECT * FROM tasks WHERE is_deleted = 0 ORDER BY completion_count DESC, position ASC", [], (err, rows) => {
                 if (err) reject(err);
                 else {
                     resolve(rows.map(row => ({

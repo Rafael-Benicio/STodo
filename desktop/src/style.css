@@ -105,6 +105,18 @@ li {
     padding: 16px;
     border-bottom: 1px solid #eee;
     gap: 15px;
+    cursor: grab;
+    background-color: white;
+    user-select: none;
+}
+
+li:active {
+    cursor: grabbing;
+}
+
+li.dragging {
+    opacity: 0.5;
+    background-color: #f0f0f0;
 }
 
 li:hover {

@@ -20,22 +20,33 @@ async function loadTasks() {
 function renderTasks() {
     taskList.innerHTML = '';
     
-    // Filtrar tarefas baseada na aba ativa
     const filteredTasks = allTasks.filter(task => {
         if (currentTab === 'pending') return !task.completed;
         return task.completed;
     });
 
-    // Mostrar ou esconder área de input
     if (currentTab === 'pending') {
         taskInputSection.style.display = 'flex';
     } else {
         taskInputSection.style.display = 'none';
     }
 
-    filteredTasks.forEach(task => {
+    filteredTasks.forEach((task, index) => {
         const li = document.createElement('li');
+        li.draggable = true;
+        li.dataset.id = task.id;
+        li.dataset.index = index;
         
+        // Eventos de Arrastar
+        li.addEventListener('dragstart', () => {
+            li.classList.add('dragging');
+        });
+
+        li.addEventListener('dragend', async () => {
+            li.classList.remove('dragging');
+            await saveNewOrder();
+        });
+
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.checked = task.completed;
@@ -65,10 +76,61 @@ function renderTasks() {
 
     if (filteredTasks.length === 0) {
         const emptyMsg = document.createElement('li');
+        emptyMsg.draggable = false;
         emptyMsg.style.justifyContent = 'center';
         emptyMsg.style.color = '#888';
         emptyMsg.innerText = currentTab === 'pending' ? 'Nenhuma tarefa pendente.' : 'Nenhuma tarefa concluída.';
         taskList.appendChild(emptyMsg);
+    }
+}
+
+// Lógica de cálculo de posição durante o arraste
+taskList.addEventListener('dragover', e => {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(taskList, e.clientY);
+    const dragging = document.querySelector('.dragging');
+    if (afterElement == null) {
+        taskList.appendChild(dragging);
+    } else {
+        taskList.insertBefore(dragging, afterElement);
+    }
+});
+
+function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
+
+    return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+            return { offset: offset, element: child };
+        } else {
+            return closest;
+        }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+}
+
+// Salvar a nova ordem no banco de dados
+async function saveNewOrder() {
+    const listItems = [...taskList.querySelectorAll('li[data-id]')];
+    let changed = false;
+
+    for (let i = 0; i < listItems.length; i++) {
+        const id = listItems[i].dataset.id;
+        const task = allTasks.find(t => t.id === id);
+        
+        // Se a posição mudou, atualizamos
+        if (task && task.position !== i) {
+            task.position = i;
+            await window.api.updateTask(task);
+            changed = true;
+        }
+    }
+
+    if (changed) {
+        console.log('[Order] Nova ordem salva e sincronizada.');
+        // Não chamamos loadTasks() aqui para evitar flicker, 
+        // já que o DOM já está na ordem certa.
     }
 }
 
