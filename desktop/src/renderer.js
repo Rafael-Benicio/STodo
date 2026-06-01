@@ -2,17 +2,38 @@ const taskList = document.getElementById('tasks');
 const taskInput = document.getElementById('taskTitle');
 const addBtn = document.getElementById('addBtn');
 const syncStatus = document.getElementById('sync-status');
+const taskInputSection = document.querySelector('.task-input');
+
+const tabPending = document.getElementById('tabPending');
+const tabCompleted = document.getElementById('tabCompleted');
+
+let currentTab = 'pending'; // 'pending' ou 'completed'
+let allTasks = [];
 
 // Carregar tarefas ao iniciar
 async function loadTasks() {
-    const tasks = await window.api.getTasks();
-    renderTasks(tasks);
+    allTasks = await window.api.getTasks();
+    renderTasks();
     syncStatus.innerText = 'Servidor rodando na rede local (Porta 8080)';
 }
 
-function renderTasks(tasks) {
+function renderTasks() {
     taskList.innerHTML = '';
-    tasks.forEach(task => {
+    
+    // Filtrar tarefas baseada na aba ativa
+    const filteredTasks = allTasks.filter(task => {
+        if (currentTab === 'pending') return !task.completed;
+        return task.completed;
+    });
+
+    // Mostrar ou esconder área de input
+    if (currentTab === 'pending') {
+        taskInputSection.style.display = 'flex';
+    } else {
+        taskInputSection.style.display = 'none';
+    }
+
+    filteredTasks.forEach(task => {
         const li = document.createElement('li');
         
         const checkbox = document.createElement('input');
@@ -41,7 +62,30 @@ function renderTasks(tasks) {
         li.appendChild(deleteBtn);
         taskList.appendChild(li);
     });
+
+    if (filteredTasks.length === 0) {
+        const emptyMsg = document.createElement('li');
+        emptyMsg.style.justifyContent = 'center';
+        emptyMsg.style.color = '#888';
+        emptyMsg.innerText = currentTab === 'pending' ? 'Nenhuma tarefa pendente.' : 'Nenhuma tarefa concluída.';
+        taskList.appendChild(emptyMsg);
+    }
 }
+
+// Lógica de troca de abas
+tabPending.onclick = () => {
+    currentTab = 'pending';
+    tabPending.classList.add('active');
+    tabCompleted.classList.remove('active');
+    renderTasks();
+};
+
+tabCompleted.onclick = () => {
+    currentTab = 'completed';
+    tabCompleted.classList.add('active');
+    tabPending.classList.remove('active');
+    renderTasks();
+};
 
 addBtn.onclick = async () => {
     const title = taskInput.value.trim();
