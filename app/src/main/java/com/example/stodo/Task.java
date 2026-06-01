@@ -3,7 +3,15 @@ package com.example.stodo;
 import com.google.gson.annotations.SerializedName;
 import java.util.Comparator;
 
+/**
+ * Task represents a single todo item in the application.
+ * It includes metadata for synchronization and manual ordering.
+ */
 public class Task {
+    /**
+     * Comparator for sorting tasks based on completion count (descending) 
+     * and manual position (ascending).
+     */
     public static final Comparator<Task> BY_PRIORITY = (t1, t2) -> {
         int countCompare = Integer.compare(t2.getCompletionCount(), t1.getCompletionCount());
         if (countCompare != 0) return countCompare;
@@ -29,14 +37,24 @@ public class Task {
     @SerializedName("isDeleted")
     private boolean isDeleted;
 
+    /**
+     * Minimal constructor for creating a new task.
+     * Example: Task t = new Task("uuid", "Buy milk", false);
+     */
     public Task(String id, String title, boolean completed) {
         this(id, title, completed, 0, 0, 0, 0, System.currentTimeMillis(), false);
     }
 
+    /**
+     * Constructor used when adding a task via UI.
+     */
     public Task(String id, String title, boolean completed, int autoUncheckMinutes, long uncheckTimestamp, int position, int completionCount) {
         this(id, title, completed, autoUncheckMinutes, uncheckTimestamp, position, completionCount, System.currentTimeMillis(), false);
     }
 
+    /**
+     * Full constructor including synchronization metadata.
+     */
     public Task(String id, String title, boolean completed, int autoUncheckMinutes, long uncheckTimestamp, int position, int completionCount, long updatedAt, boolean isDeleted) {
         this.id = id;
         this.title = title;
@@ -49,22 +67,18 @@ public class Task {
         this.isDeleted = isDeleted;
     }
 
-    public String getId() {
-        return id;
-    }
+    public String getId() { return id; }
 
-    public String getTitle() {
-        return title;
-    }
+    public String getTitle() { return title; }
 
-    public void setTitle(String title) {
-        this.title = title;
-    }
+    public void setTitle(String title) { this.title = title; }
 
-    public boolean isCompleted() {
-        return completed;
-    }
+    public boolean isCompleted() { return completed; }
 
+    /**
+     * Marks the task as completed and increments the completion count.
+     * Example: task.setCompleted(true);
+     */
     public void setCompleted(boolean completed) {
         if (!this.completed && completed) {
             this.completionCount++;
@@ -72,51 +86,27 @@ public class Task {
         this.completed = completed;
     }
 
-    public int getAutoUncheckMinutes() {
-        return autoUncheckMinutes;
-    }
+    public int getAutoUncheckMinutes() { return autoUncheckMinutes; }
 
-    public void setAutoUncheckMinutes(int autoUncheckMinutes) {
-        this.autoUncheckMinutes = autoUncheckMinutes;
-    }
+    public void setAutoUncheckMinutes(int autoUncheckMinutes) { this.autoUncheckMinutes = autoUncheckMinutes; }
 
-    public long getUncheckTimestamp() {
-        return uncheckTimestamp;
-    }
+    public long getUncheckTimestamp() { return uncheckTimestamp; }
 
-    public void setUncheckTimestamp(long uncheckTimestamp) {
-        this.uncheckTimestamp = uncheckTimestamp;
-    }
+    public void setUncheckTimestamp(long uncheckTimestamp) { this.uncheckTimestamp = uncheckTimestamp; }
 
-    public int getPosition() {
-        return position;
-    }
+    public int getPosition() { return position; }
 
-    public void setPosition(int position) {
-        this.position = position;
-    }
+    public void setPosition(int position) { this.position = position; }
 
-    public int getCompletionCount() {
-        return completionCount;
-    }
+    public int getCompletionCount() { return completionCount; }
 
-    public void setCompletionCount(int completionCount) {
-        this.completionCount = completionCount;
-    }
+    public void setCompletionCount(int completionCount) { this.completionCount = completionCount; }
 
-    public long getUpdatedAt() {
-        return updatedAt;
-    }
+    public long getUpdatedAt() { return updatedAt; }
 
-    public void setUpdatedAt(long updatedAt) {
-        this.updatedAt = updatedAt;
-    }
+    public void setUpdatedAt(long updatedAt) { this.updatedAt = updatedAt; }
 
-    public boolean isDeleted() {
-        return isDeleted;
-    }
+    public boolean isDeleted() { return isDeleted; }
 
-    public void setDeleted(boolean deleted) {
-        isDeleted = deleted;
-    }
+    public void setDeleted(boolean deleted) { isDeleted = deleted; }
 }

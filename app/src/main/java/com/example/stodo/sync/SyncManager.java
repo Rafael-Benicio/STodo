@@ -16,6 +16,10 @@ import com.google.gson.JsonObject;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * SyncManager coordinates the data synchronization between the Android app and the Desktop Hub.
+ * It follows a Push/Pull batch protocol using HTTP POST requests.
+ */
 public class SyncManager {
     private static final String TAG = "SyncManager";
     private static final int PROTOCOL_VERSION = 1;
@@ -23,89 +27,94 @@ public class SyncManager {
     private static final String KEY_LAST_SYNC_SERVER = "lastServerTimestamp";
     private static final String KEY_LAST_SYNC_LOCAL = "lastLocalTimestamp";
 
-    private final Context context;
-    private final TaskService taskService;
     private final TaskRepository repository;
     private final RequestQueue requestQueue;
     private final Gson gson;
     private final SharedPreferences prefs;
 
+    /**
+     * Interface for receiving synchronization results.
+     */
     public interface SyncCallback {
         void onSuccess();
         void onError(String message);
     }
 
     public SyncManager(Context context, TaskService taskService, TaskRepository repository) {
-        this.context = context;
-        this.taskService = taskService;
         this.repository = repository;
         this.requestQueue = Volley.newRequestQueue(context);
         this.gson = new Gson();
         this.prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
     }
 
+    /**
+     * Initiates a full synchronization cycle with the specified Desktop Hub.
+     * Example: syncManager.sync("192.168.1.5", 8080, callback);
+     */
     public void sync(String host, int port, SyncCallback callback) {
         final long startTime = System.currentTimeMillis();
         final long lastServerSync = prefs.getLong(KEY_LAST_SYNC_SERVER, 0);
         final long lastLocalSync = prefs.getLong(KEY_LAST_SYNC_LOCAL, 0);
         
         List<Task> localChanges = getLocalChanges(lastLocalSync);
-
-        Log.d(TAG, "Iniciando sync. LocalSync: " + lastLocalSync + " | ServerSync: " + lastServerSync);
-        
-        String formattedHost = host.contains(":") ? "[" + host + "]" : host;
+        String url = buildSyncUrl(host, port);
 
         try {
-            JsonObject requestBody = new JsonObject();
-            requestBody.addProperty("protocolVersion", PROTOCOL_VERSION);
-            requestBody.addProperty("lastSyncTimestamp", lastServerSync);
+            org.json.JSONObject payload = createSyncPayload(lastServerSync, localChanges);
             
-            JsonArray changesArray = new JsonArray();
-            for (Task task : localChanges) {
-                changesArray.add(gson.toJsonTree(task));
-            }
-            requestBody.add("clientChanges", changesArray);
-
-            String url = String.format("http://%s:%d/api/v1/sync", formattedHost, port);
-            Log.d(TAG, "Enviando " + localChanges.size() + " mudanças para: " + url);
-
-            org.json.JSONObject jsonObject = new org.json.JSONObject(requestBody.toString());
-
-            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, url, jsonObject,
-                response -> {
-                    try {
-                        processResponse(response);
-                        // Atualizamos a âncora local com o tempo de início do sync
-                        prefs.edit().putLong(KEY_LAST_SYNC_LOCAL, startTime).apply();
-                        callback.onSuccess();
-                    } catch (Exception e) {
-                        Log.e(TAG, "Erro processando resposta", e);
-                        callback.onError("Erro no processamento: " + e.getMessage());
-                    }
-                },
-                error -> {
-                    String errorMsg = error.getMessage();
-                    if (error.networkResponse != null) {
-                        errorMsg = "Status: " + error.networkResponse.statusCode;
-                    }
-                    Log.e(TAG, "Erro rede: " + errorMsg);
-                    callback.onError("Erro na rede: " + errorMsg);
-                }
+            JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, url, payload,
+                response -> handleSyncSuccess(response, startTime, callback),
+                error -> handleSyncError(error, callback)
             );
 
             requestQueue.add(request);
-
         } catch (Exception e) {
-            Log.e(TAG, "Erro fatal", e);
-            callback.onError("Erro interno: " + e.getMessage());
+            Log.e(TAG, "Sync initiation failed", e);
+            callback.onError("Internal error: " + e.getMessage());
         }
+    }
+
+    private String buildSyncUrl(String host, int port) {
+        String formattedHost = host.contains(":") ? "[" + host + "]" : host;
+        return String.format("http://%s:%d/api/v1/sync", formattedHost, port);
+    }
+
+    private org.json.JSONObject createSyncPayload(long lastServerSync, List<Task> changes) throws Exception {
+        JsonObject body = new JsonObject();
+        body.addProperty("protocolVersion", PROTOCOL_VERSION);
+        body.addProperty("lastSyncTimestamp", lastServerSync);
+        
+        JsonArray changesArray = new JsonArray();
+        for (Task task : changes) {
+            changesArray.add(gson.toJsonTree(task));
+        }
+        body.add("clientChanges", changesArray);
+        
+        return new org.json.JSONObject(body.toString());
+    }
+
+    private void handleSyncSuccess(org.json.JSONObject response, long startTime, SyncCallback callback) {
+        try {
+            processResponse(response);
+            prefs.edit().putLong(KEY_LAST_SYNC_LOCAL, startTime).apply();
+            callback.onSuccess();
+        } catch (Exception e) {
+            Log.e(TAG, "Response processing failed", e);
+            callback.onError("Processing error: " + e.getMessage());
+        }
+    }
+
+    private void handleSyncError(com.android.volley.VolleyError error, SyncCallback callback) {
+        String msg = error.getMessage();
+        if (error.networkResponse != null) msg = "HTTP " + error.networkResponse.statusCode;
+        Log.e(TAG, "Network error: " + msg);
+        callback.onError("Network error: " + msg);
     }
 
     private List<Task> getLocalChanges(long lastLocalSync) {
         List<Task> all = repository.getAll();
         List<Task> changes = new ArrayList<>();
         for (Task t : all) {
-            // Enviamos tudo que mudou localmente desde a última vez que enviamos algo com sucesso
             if (lastLocalSync == 0 || t.getUpdatedAt() > lastLocalSync) {
                 changes.add(t);
             }
@@ -116,22 +125,21 @@ public class SyncManager {
     private void processResponse(org.json.JSONObject response) throws Exception {
         long serverTimestamp = response.getLong("serverTimestamp");
         org.json.JSONArray serverChanges = response.getJSONArray("serverChanges");
-        Log.d(TAG, "Recebidas " + serverChanges.length() + " mudanças do servidor");
 
         for (int i = 0; i < serverChanges.length(); i++) {
-            org.json.JSONObject taskJson = serverChanges.getJSONObject(i);
-            Task serverTask = gson.fromJson(taskJson.toString(), Task.class);
-            
-            Task localTask = repository.getById(serverTask.getId());
-            if (localTask == null) {
-                repository.add(serverTask);
-            } else {
-                if (serverTask.getUpdatedAt() > localTask.getUpdatedAt()) {
-                    repository.update(serverTask);
-                }
-            }
+            Task serverTask = gson.fromJson(serverChanges.getJSONObject(i).toString(), Task.class);
+            applyServerTask(serverTask);
         }
 
         prefs.edit().putLong(KEY_LAST_SYNC_SERVER, serverTimestamp).apply();
+    }
+
+    private void applyServerTask(Task serverTask) {
+        Task localTask = repository.getById(serverTask.getId());
+        if (localTask == null) {
+            repository.add(serverTask);
+        } else if (serverTask.getUpdatedAt() > localTask.getUpdatedAt()) {
+            repository.update(serverTask);
+        }
     }
 }

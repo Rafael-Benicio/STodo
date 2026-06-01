@@ -5,15 +5,22 @@ import android.net.nsd.NsdManager;
 import android.net.nsd.NsdServiceInfo;
 import android.util.Log;
 
+/**
+ * NetworkServiceDiscovery manages the discovery of the STodo Desktop Hub on the local network.
+ * It uses the NsdManager to scan for services of type _stodo._tcp.
+ */
 public class NetworkServiceDiscovery {
     private static final String TAG = "NSD";
     private static final String SERVICE_TYPE = "_stodo._tcp";
     
-    private NsdManager nsdManager;
+    private final NsdManager nsdManager;
+    private final OnServerFoundListener listener;
     private NsdManager.DiscoveryListener discoveryListener;
-    private OnServerFoundListener listener;
     private boolean isDiscovering = false;
 
+    /**
+     * Interface for notifying when a STodo Hub is discovered and resolved.
+     */
     public interface OnServerFoundListener {
         void onServerFound(String host, int port);
     }
@@ -23,74 +30,71 @@ public class NetworkServiceDiscovery {
         this.listener = listener;
     }
 
+    /**
+     * Starts scanning for the Desktop Hub on the local network.
+     */
     public void startDiscovery() {
         if (isDiscovering) return;
         
         initializeDiscoveryListener();
         nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener);
         isDiscovering = true;
+        Log.d(TAG, "Starting network discovery...");
     }
 
+    /**
+     * Stops the active scanning process to save resources.
+     */
     public void stopDiscovery() {
         if (isDiscovering) {
             nsdManager.stopServiceDiscovery(discoveryListener);
             isDiscovering = false;
+            Log.d(TAG, "Discovery stopped.");
         }
     }
 
     private void initializeDiscoveryListener() {
         discoveryListener = new NsdManager.DiscoveryListener() {
             @Override
-            public void onStartDiscoveryFailed(String serviceType, int errorCode) {
-                Log.e(TAG, "Discovery failed: Error code:" + errorCode);
+            public void onStartDiscoveryFailed(String type, int err) {
+                Log.e(TAG, "Start failed: " + err);
                 nsdManager.stopServiceDiscovery(this);
             }
 
             @Override
-            public void onStopDiscoveryFailed(String serviceType, int errorCode) {
-                Log.e(TAG, "Discovery stop failed: Error code:" + errorCode);
+            public void onStopDiscoveryFailed(String type, int err) {
+                Log.e(TAG, "Stop failed: " + err);
                 nsdManager.stopServiceDiscovery(this);
             }
 
             @Override
-            public void onDiscoveryStarted(String serviceType) {
-                Log.d(TAG, "Service discovery started");
+            public void onDiscoveryStarted(String type) { Log.d(TAG, "Discovery active"); }
+
+            @Override
+            public void onDiscoveryStopped(String type) { Log.i(TAG, "Discovery inactive"); }
+
+            @Override
+            public void onServiceFound(NsdServiceInfo info) {
+                if (info.getServiceType().startsWith(SERVICE_TYPE)) resolveHubService(info);
             }
 
             @Override
-            public void onDiscoveryStopped(String serviceType) {
-                Log.i(TAG, "Discovery stopped: " + serviceType);
-            }
-
-            @Override
-            public void onServiceFound(NsdServiceInfo serviceInfo) {
-                Log.d(TAG, "Service found: " + serviceInfo);
-                // O Android às vezes retorna com ou sem o ponto final, vamos ser flexíveis
-                String foundType = serviceInfo.getServiceType();
-                if (foundType.startsWith(SERVICE_TYPE)) {
-                    nsdManager.resolveService(serviceInfo, new NsdManager.ResolveListener() {
-                        @Override
-                        public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode) {
-                            Log.e(TAG, "Resolve failed: " + errorCode);
-                        }
-
-                        @Override
-                        public void onServiceResolved(NsdServiceInfo serviceInfo) {
-                            Log.d(TAG, "Resolve Succeeded. " + serviceInfo);
-                            String host = serviceInfo.getHost().getHostAddress();
-                            int port = serviceInfo.getPort();
-                            listener.onServerFound(host, port);
-                        }
-                    });
-                } else {
-                    Log.d(TAG, "Unknown Service Type: " + foundType);
-                }
-            }
-
-            @Override
-            public void onServiceLost(NsdServiceInfo serviceInfo) {
-                Log.e(TAG, "service lost" + serviceInfo);
-            }
+            public void onServiceLost(NsdServiceInfo info) { Log.e(TAG, "Service lost: " + info); }
         };
+    }
+
+    private void resolveHubService(NsdServiceInfo info) {
+        nsdManager.resolveService(info, new NsdManager.ResolveListener() {
+            @Override
+            public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode) {
+                Log.e(TAG, "Resolve failed: " + errorCode);
+            }
+
+            @Override
+            public void onServiceResolved(NsdServiceInfo serviceInfo) {
+                Log.d(TAG, "Hub Resolved: " + serviceInfo.getHost().getHostAddress());
+                listener.onServerFound(serviceInfo.getHost().getHostAddress(), serviceInfo.getPort());
+            }
+        });
     }
 }

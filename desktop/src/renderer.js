@@ -1,3 +1,10 @@
+const UI_CONFIG = {
+    PORT: 8080,
+    TABS: { PENDING: 'pending', COMPLETED: 'completed' },
+    CLASS_DRAGGING: 'dragging',
+    SYNC_STATUS_TEXT: 'Sync Server running on LAN (Port 8080)'
+};
+
 const taskList = document.getElementById('tasks');
 const taskInput = document.getElementById('taskTitle');
 const addBtn = document.getElementById('addBtn');
@@ -7,143 +14,151 @@ const taskInputSection = document.querySelector('.task-input');
 const tabPending = document.getElementById('tabPending');
 const tabCompleted = document.getElementById('tabCompleted');
 
-let currentTab = 'pending'; // 'pending' ou 'completed'
+let currentTab = UI_CONFIG.TABS.PENDING;
 let allTasks = [];
 
-// Carregar tarefas ao iniciar
+/**
+ * Loads all tasks from the local database and triggers a UI refresh.
+ * Example: await loadTasks();
+ */
 async function loadTasks() {
     allTasks = await window.api.getTasks();
     renderTasks();
-    syncStatus.innerText = 'Servidor rodando na rede local (Porta 8080)';
+    syncStatus.innerText = UI_CONFIG.SYNC_STATUS_TEXT;
 }
 
+/**
+ * Creates an individual task list item (LI) with event listeners.
+ * @param {Object} task - The task object to render.
+ */
+function createTaskElement(task) {
+    const li = document.createElement('li');
+    li.draggable = true;
+    li.dataset.id = task.id;
+    
+    attachDragEvents(li);
+    appendTaskContent(li, task);
+    
+    return li;
+}
+
+/**
+ * Attaches drag and drop event listeners to a list item.
+ * @param {HTMLElement} li - The list item element.
+ */
+function attachDragEvents(li) {
+    li.addEventListener('dragstart', () => li.classList.add(UI_CONFIG.CLASS_DRAGGING));
+    li.addEventListener('dragend', async () => {
+        li.classList.remove(UI_CONFIG.CLASS_DRAGGING);
+        await saveNewOrder();
+    });
+}
+
+/**
+ * Appends checkbox, title, and delete button to the task element.
+ * @param {HTMLElement} li - The container element.
+ * @param {Object} task - The task data.
+ */
+function appendTaskContent(li, task) {
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.checked = task.completed;
+    checkbox.onchange = async () => {
+        task.completed = checkbox.checked;
+        await window.api.updateTask(task);
+        loadTasks();
+    };
+
+    const span = document.createElement('span');
+    span.className = 'task-title' + (task.completed ? ' completed' : '');
+    span.innerText = task.title;
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.innerText = 'Excluir';
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.onclick = async () => {
+        await window.api.deleteTask(task.id);
+        loadTasks();
+    };
+
+    li.appendChild(checkbox);
+    li.appendChild(span);
+    li.appendChild(deleteBtn);
+}
+
+/**
+ * Renders the filtered task list based on the currently active tab.
+ */
 function renderTasks() {
     taskList.innerHTML = '';
     
-    const filteredTasks = allTasks.filter(task => {
-        if (currentTab === 'pending') return !task.completed;
-        return task.completed;
-    });
+    const filtered = allTasks.filter(t => 
+        currentTab === UI_CONFIG.TABS.PENDING ? !t.completed : t.completed);
 
-    if (currentTab === 'pending') {
-        taskInputSection.style.display = 'flex';
-    } else {
-        taskInputSection.style.display = 'none';
-    }
+    taskInputSection.style.display = currentTab === UI_CONFIG.TABS.PENDING ? 'flex' : 'none';
 
-    filteredTasks.forEach((task, index) => {
-        const li = document.createElement('li');
-        li.draggable = true;
-        li.dataset.id = task.id;
-        li.dataset.index = index;
-        
-        // Eventos de Arrastar
-        li.addEventListener('dragstart', () => {
-            li.classList.add('dragging');
-        });
+    filtered.forEach(t => taskList.appendChild(createTaskElement(t)));
 
-        li.addEventListener('dragend', async () => {
-            li.classList.remove('dragging');
-            await saveNewOrder();
-        });
-
-        const checkbox = document.createElement('input');
-        checkbox.type = 'checkbox';
-        checkbox.checked = task.completed;
-        checkbox.onchange = async () => {
-            task.completed = checkbox.checked;
-            await window.api.updateTask(task);
-            loadTasks();
-        };
-
-        const span = document.createElement('span');
-        span.className = 'task-title' + (task.completed ? ' completed' : '');
-        span.innerText = task.title;
-
-        const deleteBtn = document.createElement('button');
-        deleteBtn.innerText = 'Excluir';
-        deleteBtn.className = 'delete-btn';
-        deleteBtn.onclick = async () => {
-            await window.api.deleteTask(task.id);
-            loadTasks();
-        };
-
-        li.appendChild(checkbox);
-        li.appendChild(span);
-        li.appendChild(deleteBtn);
-        taskList.appendChild(li);
-    });
-
-    if (filteredTasks.length === 0) {
-        const emptyMsg = document.createElement('li');
-        emptyMsg.draggable = false;
-        emptyMsg.style.justifyContent = 'center';
-        emptyMsg.style.color = '#888';
-        emptyMsg.innerText = currentTab === 'pending' ? 'Nenhuma tarefa pendente.' : 'Nenhuma tarefa concluída.';
-        taskList.appendChild(emptyMsg);
-    }
+    if (filtered.length === 0) appendEmptyState();
 }
 
-// Lógica de cálculo de posição durante o arraste
-taskList.addEventListener('dragover', e => {
-    e.preventDefault();
-    const afterElement = getDragAfterElement(taskList, e.clientY);
-    const dragging = document.querySelector('.dragging');
-    if (afterElement == null) {
-        taskList.appendChild(dragging);
-    } else {
-        taskList.insertBefore(dragging, afterElement);
-    }
-});
+/**
+ * Appends a message when the current task list is empty.
+ */
+function appendEmptyState() {
+    const emptyMsg = document.createElement('li');
+    emptyMsg.style.justifyContent = 'center';
+    emptyMsg.style.color = '#888';
+    emptyMsg.innerText = currentTab === UI_CONFIG.TABS.PENDING ? 
+        'No pending tasks.' : 'No completed tasks.';
+    taskList.appendChild(emptyMsg);
+}
 
+/**
+ * Calculates which element the dragged item should be inserted after.
+ */
 function getDragAfterElement(container, y) {
     const draggableElements = [...container.querySelectorAll('li:not(.dragging)')];
-
     return draggableElements.reduce((closest, child) => {
         const box = child.getBoundingClientRect();
         const offset = y - box.top - box.height / 2;
-        if (offset < 0 && offset > closest.offset) {
-            return { offset: offset, element: child };
-        } else {
-            return closest;
-        }
+        if (offset < 0 && offset > closest.offset) return { offset, element: child };
+        return closest;
     }, { offset: Number.NEGATIVE_INFINITY }).element;
 }
 
-// Salvar a nova ordem no banco de dados
+/**
+ * Saves the new manual order of tasks to the database.
+ */
 async function saveNewOrder() {
     const listItems = [...taskList.querySelectorAll('li[data-id]')];
-    let changed = false;
-
     for (let i = 0; i < listItems.length; i++) {
-        const id = listItems[i].dataset.id;
-        const task = allTasks.find(t => t.id === id);
-        
-        // Se a posição mudou, atualizamos
+        const task = allTasks.find(t => t.id === listItems[i].dataset.id);
         if (task && task.position !== i) {
             task.position = i;
             await window.api.updateTask(task);
-            changed = true;
         }
-    }
-
-    if (changed) {
-        console.log('[Order] Nova ordem salva e sincronizada.');
-        // Não chamamos loadTasks() aqui para evitar flicker, 
-        // já que o DOM já está na ordem certa.
     }
 }
 
-// Lógica de troca de abas
+// Global UI Listeners
+taskList.addEventListener('dragover', e => {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(taskList, e.clientY);
+    const dragging = document.querySelector('.' + UI_CONFIG.CLASS_DRAGGING);
+    if (afterElement == null) taskList.appendChild(dragging);
+    else taskList.insertBefore(dragging, afterElement);
+});
+
 tabPending.onclick = () => {
-    currentTab = 'pending';
+    currentTab = UI_CONFIG.TABS.PENDING;
     tabPending.classList.add('active');
     tabCompleted.classList.remove('active');
     renderTasks();
 };
 
 tabCompleted.onclick = () => {
-    currentTab = 'completed';
+    currentTab = UI_CONFIG.TABS.COMPLETED;
     tabCompleted.classList.add('active');
     tabPending.classList.remove('active');
     renderTasks();
@@ -152,27 +167,16 @@ tabCompleted.onclick = () => {
 addBtn.onclick = async () => {
     const title = taskInput.value.trim();
     if (title) {
-        await window.api.addTask({
-            title: title,
-            completed: false
-        });
+        await window.api.addTask({ title, completed: false });
         taskInput.value = '';
         loadTasks();
     }
 };
 
-taskInput.onkeypress = (e) => {
-    if (e.key === 'Enter') {
-        addBtn.click();
-    }
-};
+taskInput.onkeypress = (e) => { if (e.key === 'Enter') addBtn.click(); };
 
-// Escutar notificações de sincronização em tempo real do Hub
 if (window.api.onRefreshTasks) {
-    window.api.onRefreshTasks(() => {
-        console.log('[Sync] Dados atualizados via celular!');
-        loadTasks();
-    });
+    window.api.onRefreshTasks(() => loadTasks());
 }
 
 loadTasks();
