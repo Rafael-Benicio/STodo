@@ -2,12 +2,15 @@ const UI_CONFIG = {
     PORT: 8080,
     TABS: { PENDING: 'pending', COMPLETED: 'completed' },
     CLASS_DRAGGING: 'dragging',
-    SYNC_STATUS_TEXT: 'Sync Server running on LAN (Port 8080)'
+    SYNC_STATUS_TEXT: 'Sync Server running on LAN (Port 8080)',
+    STORAGE_KEYS: { THEME: 'stodo_theme' },
+    THEMES: { DARK: 'dark-mode', LIGHT: 'light-mode' }
 };
 
 const taskList = document.getElementById('tasks');
 const taskInput = document.getElementById('taskTitle');
 const addBtn = document.getElementById('addBtn');
+const themeToggle = document.getElementById('themeToggle');
 const syncStatus = document.getElementById('sync-status');
 const taskInputSection = document.querySelector('.task-input');
 
@@ -18,8 +21,30 @@ let currentTab = UI_CONFIG.TABS.PENDING;
 let allTasks = [];
 
 /**
+ * Loads and applies the saved theme preference.
+ */
+function initializeTheme() {
+    const savedTheme = localStorage.getItem(UI_CONFIG.STORAGE_KEYS.THEME);
+    if (savedTheme === UI_CONFIG.THEMES.DARK) {
+        document.body.classList.add('dark-mode');
+        themeToggle.innerText = '☀️';
+    }
+}
+
+/**
+ * Toggles the application theme between light and dark modes.
+ */
+function toggleTheme() {
+    const isDarkMode = document.body.classList.toggle('dark-mode');
+    themeToggle.innerText = isDarkMode ? '☀️' : '🌙';
+    localStorage.setItem(
+        UI_CONFIG.STORAGE_KEYS.THEME, 
+        isDarkMode ? UI_CONFIG.THEMES.DARK : UI_CONFIG.THEMES.LIGHT
+    );
+}
+
+/**
  * Loads all tasks from the local database and triggers a UI refresh.
- * Example: await loadTasks();
  */
 async function loadTasks() {
     allTasks = await window.api.getTasks();
@@ -164,6 +189,8 @@ tabCompleted.onclick = () => {
     renderTasks();
 };
 
+themeToggle.onclick = () => toggleTheme();
+
 addBtn.onclick = async () => {
     const title = taskInput.value.trim();
     if (title) {
@@ -179,4 +206,6 @@ if (window.api.onRefreshTasks) {
     window.api.onRefreshTasks(() => loadTasks());
 }
 
+// Start application
+initializeTheme();
 loadTasks();

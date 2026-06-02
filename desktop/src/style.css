@@ -1,32 +1,86 @@
+:root {
+    --primary-color: #6200ee;
+    --primary-dark: #3700b3;
+    --bg-color: #ffffff;
+    --surface-color: #ffffff;
+    --text-color: #000000;
+    --text-secondary: #666666;
+    --border-color: #eeeeee;
+    --input-bg: #f8f8f8;
+    --hover-bg: #fafafa;
+    --delete-color: #cf6679;
+    --delete-hover: #b00020;
+}
+
+body.dark-mode {
+    --bg-color: #121212;
+    --surface-color: #1e1e1e;
+    --text-color: #ffffff;
+    --text-secondary: #bbbbbb;
+    --border-color: #333333;
+    --input-bg: #2d2d2d;
+    --hover-bg: #2a2a2a;
+}
+
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: white;
+    background-color: var(--bg-color);
+    color: var(--text-color);
     margin: 0;
     padding: 0;
     display: flex;
     justify-content: center;
+    transition: background-color 0.3s, color 0.3s;
 }
 
 .container {
     width: 100%;
-    max-width: none; /* Remove o limite de 600px para ocupar a tela toda */
-    background: white;
+    max-width: none;
+    background: var(--surface-color);
     min-height: 100vh;
     display: flex;
     flex-direction: column;
 }
 
 header {
-    background-color: #6200ee;
+    background-color: var(--primary-color);
     color: white;
     padding: 20px;
-    text-align: center;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+#themeToggle {
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#themeToggle:hover {
+    background: rgba(255, 255, 255, 0.3);
 }
 
 .tabs {
     display: flex;
-    background-color: white;
-    border-bottom: 1px solid #eee;
+    background-color: var(--surface-color);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .tabs button {
@@ -38,44 +92,53 @@ header {
     cursor: pointer;
     font-size: 1rem;
     font-weight: 500;
-    color: #666;
+    color: var(--text-secondary);
     transition: all 0.2s;
 }
 
 .tabs button:hover {
-    background-color: #f8f8f8;
+    background-color: var(--hover-bg);
 }
 
 .tabs button.active {
-    color: #6200ee;
-    border-bottom-color: #6200ee;
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
     font-weight: bold;
+}
+
+body.dark-mode .tabs button.active {
+    color: #bb86fc; /* Lighter purple for dark mode visibility */
+    border-bottom-color: #bb86fc;
 }
 
 #sync-status {
     font-size: 0.8em;
     opacity: 0.8;
+    text-align: center;
+    margin-top: 10px;
 }
 
 .task-input {
     padding: 20px;
     display: flex;
     gap: 10px;
-    background-color: #f8f8f8;
-    border-bottom: 1px solid #eee;
+    background-color: var(--input-bg);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .task-input input {
     flex: 1;
     padding: 12px;
-    border: 1px solid #ddd;
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     font-size: 1rem;
+    background-color: var(--surface-color);
+    color: var(--text-color);
 }
 
 .task-input button {
     padding: 10px 24px;
-    background-color: #6200ee;
+    background-color: var(--primary-color);
     color: white;
     border: none;
     border-radius: 8px;
@@ -85,7 +148,7 @@ header {
 }
 
 .task-input button:hover {
-    background-color: #3700b3;
+    background-color: var(--primary-dark);
 }
 
 .task-list {
@@ -103,10 +166,10 @@ li {
     display: flex;
     align-items: center;
     padding: 16px;
-    border-bottom: 1px solid #eee;
+    border-bottom: 1px solid var(--border-color);
     gap: 15px;
     cursor: grab;
-    background-color: white;
+    background-color: var(--surface-color);
     user-select: none;
 }
 
@@ -116,11 +179,11 @@ li:active {
 
 li.dragging {
     opacity: 0.5;
-    background-color: #f0f0f0;
+    background-color: var(--hover-bg);
 }
 
 li:hover {
-    background-color: #fafafa;
+    background-color: var(--hover-bg);
 }
 
 .task-title {
@@ -130,12 +193,12 @@ li:hover {
 
 .completed {
     text-decoration: line-through;
-    color: #888;
+    color: var(--text-secondary);
 }
 
 button.delete-btn {
     padding: 6px 12px;
-    background-color: #cf6679;
+    background-color: var(--delete-color);
     color: white;
     border: none;
     border-radius: 4px;
@@ -144,7 +207,7 @@ button.delete-btn {
 }
 
 button.delete-btn:hover {
-    background-color: #b00020;
+    background-color: var(--delete-hover);
 }
 
 input[type="checkbox"] {
