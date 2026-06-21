@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     private final Runnable autoSyncRunnable = new Runnable() {
         @Override
         public void run() {
-            if (isAutoSyncEnabled && app.getServerHost() != null) {
+            if (isAutoSyncEnabled) {
                 performSync();
             }
             autoSyncHandler.postDelayed(this, AUTO_SYNC_INTERVAL);
@@ -163,12 +163,17 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     }
 
     private void performSync() {
-        String host = app.getServerHost();
-        if (host == null) {
+        List<STodoApplication.DiscoveredServer> servers = app.getDiscoveredServers();
+        if (servers.isEmpty()) {
             return;
         }
+        for (STodoApplication.DiscoveredServer server : servers) {
+            syncWithServer(server);
+        }
+    }
 
-        app.getSyncManager().sync(host, app.getServerPort(), new SyncManager.SyncCallback() {
+    private void syncWithServer(STodoApplication.DiscoveredServer server) {
+        app.getSyncManager().sync(server.getHost(), server.getPort(), new SyncManager.SyncCallback() {
             @Override
             public void onSuccess() {
                 runOnUiThread(() -> refreshTasks());
@@ -176,7 +181,7 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
 
             @Override
             public void onError(String message) {
-                Log.e("MainActivity", "Sync error: " + message);
+                Log.e("MainActivity", "Sync error with " + server.getName() + ": " + message);
             }
         });
     }
