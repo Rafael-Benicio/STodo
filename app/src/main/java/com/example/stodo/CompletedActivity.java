@@ -146,13 +146,18 @@ public class CompletedActivity extends AppCompatActivity implements TaskAdapter.
         runOnUiThread(() -> refreshTasks());
     }
 
+    /**
+     * Called when the activity is entering the resumed state. Registers sync listeners and runs sync.
+     * Example: onResume();
+     */
     @Override
     protected void onResume() {
         super.onResume();
-        refreshTasks();
         app.registerIncomingSyncListener(this);
+        refreshTasks();
         if (adapter != null) adapter.startCountdown();
         if (isAutoSyncEnabled) startAutoSync();
+        performSync();
     }
 
     @Override
