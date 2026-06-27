@@ -1,17 +1,16 @@
 package com.example.stodo;
 
 import android.app.Application;
+import android.content.Intent;
 import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
-import android.util.Log;
 import com.example.stodo.repository.SqliteTaskRepository;
 import com.example.stodo.repository.TaskRepository;
 import com.example.stodo.service.TaskService;
 import com.example.stodo.service.TaskServiceImpl;
-import com.example.stodo.sync.NetworkServiceDiscovery;
 import com.example.stodo.sync.SyncManager;
-import com.example.stodo.sync.SyncServer;
+import com.example.stodo.sync.SyncService;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -21,16 +20,12 @@ import java.util.Set;
 
 /**
  * STodoApplication manages the lifecycle of local repositories, services,
- * the local embedded sync server, and network discovery for P2P operations.
+ * and handles the lifecycle of the SyncService for P2P background sync.
  */
 public class STodoApplication extends Application {
-    private static final String TAG = "STodoApp";
     private TaskService taskService;
     private TaskRepository taskRepository;
-    
-    private NetworkServiceDiscovery nsd;
     private SyncManager syncManager;
-    private SyncServer syncServer;
     
     private final Set<DiscoveredServer> discoveredServers = Collections.synchronizedSet(new HashSet<>());
     private final List<OnIncomingSyncListener> incomingSyncListeners = Collections.synchronizedList(new ArrayList<>());
@@ -100,23 +95,36 @@ public class STodoApplication extends Application {
         taskRepository = new SqliteTaskRepository(this);
         taskService = new TaskServiceImpl(taskRepository);
         syncManager = new SyncManager(this, taskService, taskRepository);
-        
-        startLocalServer();
-        initializeNsd();
+        startSyncService();
     }
 
-    private void startLocalServer() {
-        syncServer = new SyncServer(taskRepository);
-        syncServer.setOnSyncCompleteListener(this::notifyIncomingSync);
-        int localPort = syncServer.start();
-        if (localPort != -1) {
-            String serviceName = "STodo Mobile (" + Build.MODEL + ")";
-            nsd = new NetworkServiceDiscovery(this, createDiscoveryCallback());
-            nsd.registerService(serviceName, localPort);
+    /**
+     * Starts the background SyncService to enable persistent synchronization.
+     * Example: app.startSyncService();
+     */
+    public void startSyncService() {
+        Intent intent = new Intent(this, SyncService.class);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            startForegroundService(intent);
+        } else {
+            startService(intent);
         }
     }
 
-    private void notifyIncomingSync() {
+    /**
+     * Stops the background SyncService.
+     * Example: app.stopSyncService();
+     */
+    public void stopSyncService() {
+        Intent intent = new Intent(this, SyncService.class);
+        stopService(intent);
+    }
+
+    /**
+     * Dispatches notifications to all registered UI sync listeners on the Main Thread.
+     * Example: app.notifyIncomingSync();
+     */
+    public void notifyIncomingSync() {
         new Handler(Looper.getMainLooper()).post(() -> {
             synchronized (incomingSyncListeners) {
                 for (OnIncomingSyncListener listener : incomingSyncListeners) {
@@ -126,39 +134,22 @@ public class STodoApplication extends Application {
         });
     }
 
-    private void initializeNsd() {
-        if (nsd == null) {
-            nsd = new NetworkServiceDiscovery(this, createDiscoveryCallback());
-        }
-        nsd.startDiscovery();
+    /**
+     * Adds a newly discovered server to the list of active peers.
+     * Example: app.addDiscoveredServer("Mobile", "192.168.1.10", 8080);
+     */
+    public void addDiscoveredServer(String name, String host, int port) {
+        // Track the newly resolved peer
+        discoveredServers.add(new DiscoveredServer(name, host, port));
     }
 
-    private NetworkServiceDiscovery.DiscoveryCallback createDiscoveryCallback() {
-        return new NetworkServiceDiscovery.DiscoveryCallback() {
-            @Override
-            public void onServerFound(String name, String host, int port) {
-                Log.d(TAG, "Server discovered: " + name + " -> " + host + ":" + port);
-                discoveredServers.add(new DiscoveredServer(name, host, port));
-            }
-
-            @Override
-            public void onServerLost(String name) {
-                Log.d(TAG, "Server lost: " + name);
-                discoveredServers.remove(new DiscoveredServer(name, "", 0));
-            }
-        };
-    }
-
-    @Override
-    public void onTerminate() {
-        super.onTerminate();
-        if (syncServer != null) {
-            syncServer.stop();
-        }
-        if (nsd != null) {
-            nsd.unregisterService();
-            nsd.stopDiscovery();
-        }
+    /**
+     * Removes a peer that is no longer available on the network.
+     * Example: app.removeDiscoveredServer("Mobile");
+     */
+    public void removeDiscoveredServer(String name) {
+        // Untrack the lost peer
+        discoveredServers.remove(new DiscoveredServer(name, "", 0));
     }
 
     /**
@@ -198,12 +189,6 @@ public class STodoApplication extends Application {
      * Example: SyncManager manager = app.getSyncManager();
      */
     public SyncManager getSyncManager() { return syncManager; }
-
-    /**
-     * Returns the active NetworkServiceDiscovery controller.
-     * Example: NetworkServiceDiscovery nsd = app.getNsd();
-     */
-    public NetworkServiceDiscovery getNsd() { return nsd; }
 
     /**
      * Returns a thread-safe list copy of all active discovered servers.

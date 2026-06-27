@@ -129,13 +129,20 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     }
 
     private void checkPermissionsAndStartDiscovery() {
-        String permission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? 
+        java.util.List<String> list = new java.util.ArrayList<>();
+        String wifiPermission = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU ? 
             Manifest.permission.NEARBY_WIFI_DEVICES : Manifest.permission.ACCESS_FINE_LOCATION;
-            
-        if (ContextCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{permission}, REQUEST_CODE_PERMISSIONS);
+        if (ContextCompat.checkSelfPermission(this, wifiPermission) != PackageManager.PERMISSION_GRANTED) {
+            list.add(wifiPermission);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && 
+            ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            list.add(Manifest.permission.POST_NOTIFICATIONS);
+        }
+        if (!list.isEmpty()) {
+            ActivityCompat.requestPermissions(this, list.toArray(new String[0]), REQUEST_CODE_PERMISSIONS);
         } else {
-            app.getNsd().startDiscovery();
+            app.startSyncService();
         }
     }
 
@@ -143,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_CODE_PERMISSIONS && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            app.getNsd().startDiscovery();
+            app.startSyncService();
         }
     }
 
