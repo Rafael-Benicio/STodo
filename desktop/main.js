@@ -3,6 +3,8 @@ const path = require('path');
 const { startSyncServer, processClientPush } = require('./server/sync-server');
 const { startMdnsService, getPeers } = require('./server/mdns-service');
 const TaskRepository = require('./db/database');
+const logger = require('./server/console-ansi-logger');
+
 
 const APP_CONFIG = {
     WINDOW_WIDTH: 1000,
@@ -111,7 +113,7 @@ async function pushChangesToPeers() {
         try {
             await syncWithPeer(peer);
         } catch (err) {
-            console.error(`[Sync] Failed to sync with peer ${peer.name}:`, err.message);
+            logger.error('Sync', `Failed to sync with peer ${peer.name}: ${err.message}`);
         }
     }
 }
@@ -135,6 +137,7 @@ async function syncWithPeer(peer) {
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const responseData = await response.json();
     await handlePeerSyncResponse(peer.name, responseData);
+    logger.info('Sync', `Successfully synchronized with peer ${peer.name}: sent ${localChanges.length} local changes, received ${responseData.serverChanges ? responseData.serverChanges.length : 0} changes`);
 }
 
 /**
@@ -194,7 +197,7 @@ app.on('ready', () => {
         triggerPeerSync();
     });
     
-    console.log('STodo Desktop Hub initialized in background.');
+    logger.info('App', 'STodo Desktop Hub initialized in background.');
 });
 
 // Keep the process running when windows are hidden

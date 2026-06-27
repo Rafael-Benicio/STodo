@@ -1,4 +1,5 @@
 const { Bonjour } = require('bonjour-service');
+const logger = require('./console-ansi-logger');
 
 let bonjourInstance = null;
 const peers = new Map();
@@ -37,7 +38,7 @@ function startMdnsService(port = 8080, onPeerChange) {
         txt: { version: '1.0.0' }
     });
 
-    console.log(`Serviço mDNS anunciado: _stodo._tcp. local na porta ${port}`);
+    logger.info('mDNS', `mDNS Service published: _stodo._tcp.local on port ${port}`);
 
     const browser = bonjour.find({ type: 'stodo' });
     setupBrowserListeners(browser, port, onPeerChange);
@@ -53,18 +54,12 @@ function setupBrowserListeners(browser, localPort, onPeerChange) {
         const isSelf = peer.name === 'STodo Desktop Hub' || 
                        (peer.port === localPort && isLocalIp(peer.referer.address));
         if (isSelf) return;
-
-        console.log(`[mDNS] Peer found: ${peer.name} at ${peer.referer.address}:${peer.port}`);
-        peers.set(peer.name, {
-            name: peer.name,
-            host: peer.referer.address,
-            port: peer.port
-        });
+        logger.info('mDNS', `Peer found: ${peer.name} at ${peer.referer.address}:${peer.port}`);
+        peers.set(peer.name, { name: peer.name, host: peer.referer.address, port: peer.port });
         if (onPeerChange) onPeerChange(getPeers());
     });
-
     browser.on('down', (peer) => {
-        console.log(`[mDNS] Peer lost: ${peer.name}`);
+        logger.info('mDNS', `Peer lost: ${peer.name}`);
         peers.delete(peer.name);
         if (onPeerChange) onPeerChange(getPeers());
     });
