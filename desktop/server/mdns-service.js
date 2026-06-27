@@ -8,7 +8,8 @@ const peers = new Map();
  * @param {string} ip - The IP address to check.
  */
 function isLocalIp(ip) {
-    return ip === '127.0.0.1' || ip === '::1';
+    const isLocal = ip === '127.0.0.1' || ip === '::1';
+    return isLocal;
 }
 
 /**
@@ -16,7 +17,8 @@ function isLocalIp(ip) {
  * Example: const activePeers = getPeers();
  */
 function getPeers() {
-    return Array.from(peers.values());
+    const list = Array.from(peers.values());
+    return list;
 }
 
 /**

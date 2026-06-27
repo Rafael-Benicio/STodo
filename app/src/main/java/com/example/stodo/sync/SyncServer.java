@@ -71,7 +71,9 @@ public class SyncServer {
      * Example: syncServer.setOnSyncCompleteListener(listener);
      */
     public void setOnSyncCompleteListener(OnSyncCompleteListener listener) {
-        this.listener = listener;
+        if (listener != null) {
+            this.listener = listener;
+        }
     }
 
     /**
