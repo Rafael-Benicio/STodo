@@ -2,6 +2,8 @@ package com.example.stodo;
 
 import android.app.Application;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 import com.example.stodo.repository.SqliteTaskRepository;
 import com.example.stodo.repository.TaskRepository;
@@ -31,6 +33,18 @@ public class STodoApplication extends Application {
     private SyncServer syncServer;
     
     private final Set<DiscoveredServer> discoveredServers = Collections.synchronizedSet(new HashSet<>());
+    private final List<OnIncomingSyncListener> incomingSyncListeners = Collections.synchronizedList(new ArrayList<>());
+
+    /**
+     * Interface to receive notifications for incoming sync events.
+     */
+    public interface OnIncomingSyncListener {
+        /**
+         * Triggered when an incoming sync finishes.
+         * Example: listener.onIncomingSync();
+         */
+        void onIncomingSync();
+    }
 
     /**
      * DiscoveredServer represents a peer or hub found on the local network.
@@ -93,12 +107,23 @@ public class STodoApplication extends Application {
 
     private void startLocalServer() {
         syncServer = new SyncServer(taskRepository);
+        syncServer.setOnSyncCompleteListener(this::notifyIncomingSync);
         int localPort = syncServer.start();
         if (localPort != -1) {
             String serviceName = "STodo Mobile (" + Build.MODEL + ")";
             nsd = new NetworkServiceDiscovery(this, createDiscoveryCallback());
             nsd.registerService(serviceName, localPort);
         }
+    }
+
+    private void notifyIncomingSync() {
+        new Handler(Looper.getMainLooper()).post(() -> {
+            synchronized (incomingSyncListeners) {
+                for (OnIncomingSyncListener listener : incomingSyncListeners) {
+                    listener.onIncomingSync();
+                }
+            }
+        });
     }
 
     private void initializeNsd() {
@@ -133,6 +158,26 @@ public class STodoApplication extends Application {
         if (nsd != null) {
             nsd.unregisterService();
             nsd.stopDiscovery();
+        }
+    }
+
+    /**
+     * Registers a listener to be notified when an incoming sync completes.
+     * Example: app.registerIncomingSyncListener(listener);
+     */
+    public void registerIncomingSyncListener(OnIncomingSyncListener listener) {
+        if (listener != null) {
+            incomingSyncListeners.add(listener);
+        }
+    }
+
+    /**
+     * Unregisters a previously registered listener.
+     * Example: app.unregisterIncomingSyncListener(listener);
+     */
+    public void unregisterIncomingSyncListener(OnIncomingSyncListener listener) {
+        if (listener != null) {
+            incomingSyncListeners.remove(listener);
         }
     }
 

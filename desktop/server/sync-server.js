@@ -83,4 +83,8 @@ function startSyncServer(port = CONFIG.DEFAULT_PORT, onSyncComplete) {
     });
 }
 
-module.exports = startSyncServer;
+module.exports = {
+    startSyncServer,
+    processClientPush,
+    prepareSyncResponse
+};

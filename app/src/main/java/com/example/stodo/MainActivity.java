@@ -34,10 +34,10 @@ import android.os.Looper;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTaskClickListener {
+public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTaskClickListener, STodoApplication.OnIncomingSyncListener {
 
     private static final int REQUEST_CODE_PERMISSIONS = 123;
-    private static final long AUTO_SYNC_INTERVAL = 5000; // 5 segundos
+    private static final long AUTO_SYNC_INTERVAL = 60000; // 60 segundos
 
     private TaskService taskService;
     private TaskRepository taskRepository;
@@ -47,6 +47,13 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     private STodoApplication app;
     private boolean isAutoSyncEnabled = false;
     private final Handler autoSyncHandler = new Handler(Looper.getMainLooper());
+    private final Handler syncDebounceHandler = new Handler(Looper.getMainLooper());
+    private final Runnable syncDebounceRunnable = new Runnable() {
+        @Override
+        public void run() {
+            performSync();
+        }
+    };
     private final Runnable autoSyncRunnable = new Runnable() {
         @Override
         public void run() {
@@ -188,14 +195,21 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
 
     private void triggerImmediateSync() {
         if (isAutoSyncEnabled) {
-            performSync();
+            syncDebounceHandler.removeCallbacks(syncDebounceRunnable);
+            syncDebounceHandler.postDelayed(syncDebounceRunnable, 500);
         }
+    }
+
+    @Override
+    public void onIncomingSync() {
+        runOnUiThread(() -> refreshTasks());
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         refreshTasks();
+        app.registerIncomingSyncListener(this);
         if (adapter != null) adapter.startCountdown();
         if (isAutoSyncEnabled) startAutoSync();
     }
@@ -204,6 +218,7 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
     protected void onPause() {
         super.onPause();
         stopAutoSync();
+        app.unregisterIncomingSyncListener(this);
         if (adapter != null) adapter.stopCountdown();
     }
 

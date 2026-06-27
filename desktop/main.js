@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
-const startSyncServer = require('./server/sync-server');
-const startMdnsService = require('./server/mdns-service');
+const { startSyncServer, processClientPush } = require('./server/sync-server');
+const { startMdnsService, getPeers } = require('./server/mdns-service');
 const TaskRepository = require('./db/database');
 
 const APP_CONFIG = {
@@ -90,6 +90,65 @@ function createTray() {
     });
 }
 
+const lastSyncs = new Map();
+let syncTimeout = null;
+
+/**
+ * Triggers a debounced sync call to all discovered peers.
+ */
+function triggerPeerSync() {
+    if (syncTimeout) clearTimeout(syncTimeout);
+    syncTimeout = setTimeout(pushChangesToPeers, 500);
+}
+
+/**
+ * Sends local modifications to all discovered mobile peers.
+ */
+async function pushChangesToPeers() {
+    const peersList = getPeers();
+    if (peersList.length === 0) return;
+    for (const peer of peersList) {
+        try {
+            await syncWithPeer(peer);
+        } catch (err) {
+            console.error(`[Sync] Failed to sync with peer ${peer.name}:`, err.message);
+        }
+    }
+}
+
+/**
+ * Performs a Push/Pull sync request to a specific peer.
+ */
+async function syncWithPeer(peer) {
+    const lastSync = lastSyncs.get(peer.name) || 0;
+    const localChanges = await TaskRepository.getForSync(lastSync);
+    const payload = {
+        protocolVersion: 1,
+        lastSyncTimestamp: lastSync,
+        clientChanges: localChanges
+    };
+    const response = await fetch(`http://${peer.host}:${peer.port}/api/v1/sync`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const responseData = await response.json();
+    await handlePeerSyncResponse(peer.name, responseData);
+}
+
+/**
+ * Processes incoming changes from a peer sync response.
+ */
+async function handlePeerSyncResponse(peerName, responseData) {
+    const { serverTimestamp, serverChanges } = responseData;
+    if (serverChanges && serverChanges.length > 0) {
+        await processClientPush(serverChanges);
+        if (mainWindow) mainWindow.webContents.send('refresh-tasks');
+    }
+    lastSyncs.set(peerName, serverTimestamp);
+}
+
 // IPC Handlers (UI -> DB)
 ipcMain.handle('get-tasks', async () => {
     return await TaskRepository.getAll();
@@ -99,12 +158,16 @@ ipcMain.handle('add-task', async (event, task) => {
     const maxPos = await TaskRepository.getMaxPosition();
     task.position = maxPos + 1;
     task.updatedAt = Date.now();
-    return await TaskRepository.insert(task);
+    const result = await TaskRepository.insert(task);
+    triggerPeerSync();
+    return result;
 });
 
 ipcMain.handle('update-task', async (event, task) => {
     task.updatedAt = Date.now();
-    return await TaskRepository.update(task);
+    const result = await TaskRepository.update(task);
+    triggerPeerSync();
+    return result;
 });
 
 ipcMain.handle('delete-task', async (event, id) => {
@@ -112,7 +175,9 @@ ipcMain.handle('delete-task', async (event, id) => {
     if (task) {
         task.isDeleted = true;
         task.updatedAt = Date.now();
-        return await TaskRepository.update(task);
+        const result = await TaskRepository.update(task);
+        triggerPeerSync();
+        return result;
     }
 });
 
@@ -125,7 +190,9 @@ app.on('ready', () => {
             mainWindow.webContents.send('refresh-tasks');
         }
     });
-    startMdnsService(APP_CONFIG.SYNC_PORT);
+    startMdnsService(APP_CONFIG.SYNC_PORT, (peers) => {
+        triggerPeerSync();
+    });
     
     console.log('STodo Desktop Hub initialized in background.');
 });

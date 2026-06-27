@@ -44,6 +44,18 @@ public class SyncServer {
     private Thread serverThread;
     private int port = -1;
     private volatile boolean running = false;
+    private OnSyncCompleteListener listener;
+
+    /**
+     * Interface to listen for successfully processed synchronization requests.
+     */
+    public interface OnSyncCompleteListener {
+        /**
+         * Triggered when a sync session finishes applying client updates.
+         * Example: listener.onSyncComplete();
+         */
+        void onSyncComplete();
+    }
 
     /**
      * Constructs a SyncServer using the provided TaskRepository.
@@ -52,6 +64,14 @@ public class SyncServer {
     public SyncServer(TaskRepository repository) {
         this.repository = repository;
         this.gson = new Gson();
+    }
+
+    /**
+     * Registers a listener to be notified when a synchronization session completes.
+     * Example: syncServer.setOnSyncCompleteListener(listener);
+     */
+    public void setOnSyncCompleteListener(OnSyncCompleteListener listener) {
+        this.listener = listener;
     }
 
     /**
@@ -183,19 +203,30 @@ public class SyncServer {
             return;
         }
         JsonObject json = JsonParser.parseString(requestBody).getAsJsonObject();
-        int clientVersion = json.get("protocolVersion").getAsInt();
-        if (clientVersion > PROTOCOL_VERSION) {
-            sendResponse(output, HTTP_UPGRADE_REQUIRED, "Upgrade Required");
-            return;
-        }
+        if (!validateSyncRequest(json, output)) return;
 
         long lastSyncTimestamp = json.get("lastSyncTimestamp").getAsLong();
         JsonArray clientChanges = json.getAsJsonArray("clientChanges");
-        
+        performDatabaseSync(clientChanges, lastSyncTimestamp, output);
+    }
+
+    private boolean validateSyncRequest(JsonObject json, OutputStream output) throws Exception {
+        int clientVersion = json.get("protocolVersion").getAsInt();
+        if (clientVersion > PROTOCOL_VERSION) {
+            sendResponse(output, HTTP_UPGRADE_REQUIRED, "Upgrade Required");
+            return false;
+        }
+        return true;
+    }
+
+    private void performDatabaseSync(JsonArray clientChanges, long lastSyncTimestamp, OutputStream output) throws Exception {
         synchronized (repository) {
             processClientChanges(clientChanges);
             String responseJson = prepareSyncResponse(lastSyncTimestamp);
             sendResponse(output, HTTP_OK, responseJson);
+            if (listener != null) {
+                listener.onSyncComplete();
+            }
         }
     }
 
