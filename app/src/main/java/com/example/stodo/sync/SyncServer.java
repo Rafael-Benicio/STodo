@@ -37,6 +37,9 @@ public class SyncServer {
 
     // Header prefix constant to avoid magic substring index
     private static final String HEADER_CONTENT_LENGTH = "content-length:";
+
+    // EOF representation constant for reading from a reader to avoid magic numbers
+    private static final int EOF_MARKER = -1;
     
     private final TaskRepository repository;
     private final Gson gson;
@@ -168,6 +171,20 @@ public class SyncServer {
         String body;
     }
 
+    private String readRequestBody(BufferedReader reader, int length) throws Exception {
+        char[] bodyChars = new char[length];
+        int totalRead = 0;
+        while (totalRead < length) {
+            int read = reader.read(bodyChars, totalRead, length - totalRead);
+            if (read == EOF_MARKER) {
+                throw new java.io.IOException("Stream closed prematurely: read " 
+                    + totalRead + " bytes of expected " + length);
+            }
+            totalRead += read;
+        }
+        return new String(bodyChars);
+    }
+
     private HttpRequest parseRequest(BufferedReader reader) throws Exception {
         String line = reader.readLine();
         if (line == null || line.trim().isEmpty()) return null;
@@ -181,9 +198,7 @@ public class SyncServer {
 
         int contentLength = readHeaders(reader);
         if (contentLength > 0) {
-            char[] bodyChars = new char[contentLength];
-            int read = reader.read(bodyChars, 0, contentLength);
-            if (read == contentLength) req.body = new String(bodyChars);
+            req.body = readRequestBody(reader, contentLength);
         }
         return req;
     }
