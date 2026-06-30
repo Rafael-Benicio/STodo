@@ -89,6 +89,10 @@ function startSyncServer(port = CONFIG.DEFAULT_PORT, onSyncComplete) {
         handleSyncRequest(req, res, onSyncComplete);
     });
 
+    app.get('/api/v1/ping', (req, res) => {
+        res.status(CONFIG.HTTP_OK).json({ status: "ok" });
+    });
+
     app.listen(port, () => {
         logger.info('Sync', `Sync Server running on port ${port}`);
     });

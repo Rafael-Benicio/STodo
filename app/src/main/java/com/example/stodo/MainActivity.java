@@ -265,6 +265,11 @@ public class MainActivity extends AppCompatActivity implements TaskAdapter.OnTas
                 overridePendingTransition(0, 0);
                 finish();
                 return true;
+            } else if (item.getItemId() == R.id.navigation_network) {
+                startActivity(new Intent(this, NetworkActivity.class));
+                overridePendingTransition(0, 0);
+                finish();
+                return true;
             }
             return item.getItemId() == R.id.navigation_tasks;
         });

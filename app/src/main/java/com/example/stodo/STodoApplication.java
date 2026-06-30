@@ -121,6 +121,16 @@ public class STodoApplication extends Application {
     }
 
     /**
+     * Restarts the background SyncService to refresh NSD discovery.
+     * Example: app.restartSyncService();
+     */
+    public void restartSyncService() {
+        stopSyncService();
+        discoveredServers.clear();
+        startSyncService();
+    }
+
+    /**
      * Dispatches notifications to all registered UI sync listeners on the Main Thread.
      * Example: app.notifyIncomingSync();
      */

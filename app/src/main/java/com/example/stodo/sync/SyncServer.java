@@ -137,24 +137,29 @@ public class SyncServer {
     private void handleConnection(Socket socket) {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
              OutputStream output = socket.getOutputStream()) {
-            
             HttpRequest request = parseRequest(reader);
             if (request == null) {
                 sendResponse(output, HTTP_BAD_REQUEST, "Bad Request");
                 return;
             }
-            
-            if (!"POST".equalsIgnoreCase(request.method) || !"/api/v1/sync".equals(request.path)) {
-                sendResponse(output, HTTP_NOT_FOUND, "Not Found");
-                return;
-            }
-
-            processSyncRequest(request.body, output);
+            routeRequest(request, output);
         } catch (Exception e) {
             Log.e(TAG, "Connection handler error", e);
         } finally {
             closeSocket(socket);
         }
+    }
+
+    private void routeRequest(HttpRequest request, OutputStream output) throws Exception {
+        if ("GET".equalsIgnoreCase(request.method) && "/api/v1/ping".equals(request.path)) {
+            sendResponse(output, HTTP_OK, "{\"status\":\"ok\"}");
+            return;
+        }
+        if (!"POST".equalsIgnoreCase(request.method) || !"/api/v1/sync".equals(request.path)) {
+            sendResponse(output, HTTP_NOT_FOUND, "Not Found");
+            return;
+        }
+        processSyncRequest(request.body, output);
     }
 
     private void closeSocket(Socket socket) {

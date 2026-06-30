@@ -73,6 +73,33 @@ public class SyncServerTest {
         }
     }
 
+    /**
+     * Verifies that the SyncServer responds correctly to a ping GET request.
+     * Example: testServerPing();
+     */
+    @org.junit.Test
+    public void testServerPing() throws Exception {
+        int port = server.start();
+        org.junit.Assert.assertTrue("Server failed to start", port > 0);
+
+        try (java.net.Socket socket = new java.net.Socket("127.0.0.1", port);
+             java.io.OutputStream out = socket.getOutputStream();
+             java.io.BufferedReader in = new java.io.BufferedReader(
+                 new java.io.InputStreamReader(socket.getInputStream(), java.nio.charset.StandardCharsets.UTF_8))) {
+            
+            String headers = "GET /api/v1/ping HTTP/1.1\r\n" +
+                    "Host: 127.0.0.1\r\n" +
+                    "Connection: close\r\n\r\n";
+            out.write(headers.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            out.flush();
+
+            String statusLine = in.readLine();
+            org.junit.Assert.assertNotNull("Status line is null", statusLine);
+            org.junit.Assert.assertTrue("Response status was not OK: " + statusLine,
+                    statusLine.contains("200 OK"));
+        }
+    }
+
     private void writeHttpRequestHeaders(java.io.OutputStream out, int bodyLength) throws Exception {
         String headers = "POST /api/v1/sync HTTP/1.1\r\n" +
                 "Host: 127.0.0.1\r\n" +

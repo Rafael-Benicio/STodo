@@ -40,6 +40,23 @@ public class SyncManager {
         void onError(String message);
     }
 
+    /**
+     * Interface for receiving ping synchronization results.
+     */
+    public interface PingCallback {
+        /**
+         * Triggered when a ping succeeds with its round-trip latency.
+         * Example: callback.onSuccess(15);
+         */
+        void onSuccess(long latencyMs);
+
+        /**
+         * Triggered when a ping fails.
+         * Example: callback.onError("Timeout");
+         */
+        void onError(String message);
+    }
+
     public SyncManager(Context context, TaskService taskService, TaskRepository repository) {
         this.repository = repository;
         this.requestQueue = Volley.newRequestQueue(context);
@@ -72,6 +89,22 @@ public class SyncManager {
             Log.e(TAG, "Sync initiation failed", e);
             callback.onError("Internal error: " + e.getMessage());
         }
+    }
+
+    /**
+     * Sends a ping to check the peer's reachability.
+     * Example: syncManager.ping("192.168.1.5", 8080, callback);
+     */
+    public void ping(String host, int port, PingCallback callback) {
+        final long startTime = System.currentTimeMillis();
+        String formattedHost = host.contains(":") ? "[" + host + "]" : host;
+        String url = String.format("http://%s:%d/api/v1/ping", formattedHost, port);
+
+        JsonObjectRequest request = new JsonObjectRequest(Request.Method.GET, url, null,
+            response -> callback.onSuccess(System.currentTimeMillis() - startTime),
+            error -> callback.onError(error.getMessage() != null ? error.getMessage() : "HTTP error")
+        );
+        requestQueue.add(request);
     }
 
     private String buildSyncUrl(String host, int port) {

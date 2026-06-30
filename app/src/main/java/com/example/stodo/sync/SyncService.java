@@ -108,6 +108,7 @@ public class SyncService extends Service {
             public void onServerLost(String name) {
                 Log.d(TAG, "Peer lost: " + name);
                 app.removeDiscoveredServer(name);
+                app.notifyIncomingSync();
             }
         };
     }
