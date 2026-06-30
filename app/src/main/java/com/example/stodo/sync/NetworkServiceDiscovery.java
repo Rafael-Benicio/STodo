@@ -19,6 +19,9 @@ public class NetworkServiceDiscovery {
     private NsdManager.RegistrationListener registrationListener;
     private String registeredServiceName;
     private boolean isDiscovering = false;
+    private android.net.wifi.WifiManager.MulticastLock multicastLock;
+    private final java.util.Queue<NsdServiceInfo> resolveQueue = new java.util.LinkedList<>();
+    private boolean isResolving = false;
 
     /**
      * Callback interface for discovery events.
@@ -46,6 +49,12 @@ public class NetworkServiceDiscovery {
     public NetworkServiceDiscovery(Context context, DiscoveryCallback callback) {
         this.nsdManager = (NsdManager) context.getSystemService(Context.NSD_SERVICE);
         this.callback = callback;
+        android.net.wifi.WifiManager wifi = (android.net.wifi.WifiManager) 
+            context.getApplicationContext().getSystemService(Context.WIFI_SERVICE);
+        if (wifi != null) {
+            this.multicastLock = wifi.createMulticastLock("STodoMulticastLock");
+            this.multicastLock.setReferenceCounted(false);
+        }
     }
 
     /**
@@ -54,6 +63,9 @@ public class NetworkServiceDiscovery {
      */
     public void startDiscovery() {
         if (isDiscovering) return;
+        if (multicastLock != null && !multicastLock.isHeld()) {
+            multicastLock.acquire();
+        }
         initializeDiscoveryListener();
         nsdManager.discoverServices(SERVICE_TYPE, NsdManager.PROTOCOL_DNS_SD, discoveryListener);
         isDiscovering = true;
@@ -66,6 +78,9 @@ public class NetworkServiceDiscovery {
      */
     public void stopDiscovery() {
         if (!isDiscovering) return;
+        if (multicastLock != null && multicastLock.isHeld()) {
+            multicastLock.release();
+        }
         nsdManager.stopServiceDiscovery(discoveryListener);
         isDiscovering = false;
         Log.d(TAG, "Discovery stopped.");
@@ -149,34 +164,65 @@ public class NetworkServiceDiscovery {
 
     private void handleServiceFound(NsdServiceInfo info) {
         if (info.getServiceType().startsWith(SERVICE_TYPE)) {
-            resolveHubService(info);
+            synchronized (resolveQueue) {
+                resolveQueue.add(info);
+                if (!isResolving) {
+                    resolveNext();
+                }
+            }
+        }
+    }
+
+    private void resolveNext() {
+        NsdServiceInfo nextInfo;
+        synchronized (resolveQueue) {
+            nextInfo = resolveQueue.peek();
+            if (nextInfo == null) {
+                isResolving = false;
+                return;
+            }
+            isResolving = true;
+        }
+        resolveServiceInfo(nextInfo);
+    }
+
+    private void resolveServiceInfo(NsdServiceInfo info) {
+        nsdManager.resolveService(info, new NsdManager.ResolveListener() {
+            @Override
+            public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode) {
+                Log.e(TAG, "Resolve failed: " + errorCode);
+                finishResolve();
+            }
+
+            @Override
+            public void onServiceResolved(NsdServiceInfo serviceInfo) {
+                handleResolved(serviceInfo);
+                finishResolve();
+            }
+        });
+    }
+
+    private void handleResolved(NsdServiceInfo serviceInfo) {
+        String name = serviceInfo.getServiceName();
+        if (registeredServiceName != null && registeredServiceName.equals(name)) {
+            Log.d(TAG, "Ignoring self-discovered service: " + name);
+            return;
+        }
+        String host = serviceInfo.getHost().getHostAddress();
+        int port = serviceInfo.getPort();
+        Log.d(TAG, "Service Resolved: " + name + " at " + host + ":" + port);
+        callback.onServerFound(name, host, port);
+    }
+
+    private void finishResolve() {
+        synchronized (resolveQueue) {
+            resolveQueue.poll();
+            resolveNext();
         }
     }
 
     private void handleServiceLost(NsdServiceInfo info) {
         Log.i(TAG, "Service lost: " + info.getServiceName());
         callback.onServerLost(info.getServiceName());
-    }
-
-    private void resolveHubService(NsdServiceInfo info) {
-        nsdManager.resolveService(info, new NsdManager.ResolveListener() {
-            @Override
-            public void onResolveFailed(NsdServiceInfo serviceInfo, int errorCode) {
-                Log.e(TAG, "Resolve failed: " + errorCode);
-            }
-
-            @Override
-            public void onServiceResolved(NsdServiceInfo serviceInfo) {
-                String name = serviceInfo.getServiceName();
-                if (registeredServiceName != null && registeredServiceName.equals(name)) {
-                    Log.d(TAG, "Ignoring self-discovered service: " + name);
-                    return;
-                }
-                String host = serviceInfo.getHost().getHostAddress();
-                int port = serviceInfo.getPort();
-                Log.d(TAG, "Service Resolved: " + name + " at " + host + ":" + port);
-                callback.onServerFound(name, host, port);
-            }
-        });
     }
 }
