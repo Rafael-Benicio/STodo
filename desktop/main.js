@@ -167,7 +167,7 @@ ipcMain.handle('add-task', async (event, task) => {
 });
 
 ipcMain.handle('update-task', async (event, task) => {
-    task.updatedAt = Date.now();
+    task.updatedAt = Math.max(Date.now(), (task.updatedAt || 0) + 1);
     const result = await TaskRepository.update(task);
     triggerPeerSync();
     return result;
@@ -177,7 +177,7 @@ ipcMain.handle('delete-task', async (event, id) => {
     const task = await TaskRepository.getById(id);
     if (task) {
         task.isDeleted = true;
-        task.updatedAt = Date.now();
+        task.updatedAt = Math.max(Date.now(), (task.updatedAt || 0) + 1);
         const result = await TaskRepository.update(task);
         triggerPeerSync();
         return result;

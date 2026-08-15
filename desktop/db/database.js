@@ -60,7 +60,7 @@ const TaskRepository = {
     getAll: () => {
         const query = `SELECT * FROM ${DB_CONFIG.TABLE_NAME} 
                        WHERE is_deleted = ${DB_CONFIG.STATUS_ACTIVE} 
-                       ORDER BY completion_count DESC, position ASC`;
+                       ORDER BY position ASC`;
         return new Promise((resolve, reject) => {
             db.all(query, [], (err, rows) => {
                 if (err) return reject(err);

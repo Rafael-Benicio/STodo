@@ -16,6 +16,8 @@ const taskInputSection = document.querySelector('.task-input');
 
 const tabPending = document.getElementById('tabPending');
 const tabCompleted = document.getElementById('tabCompleted');
+const sortChecksBtn = document.getElementById('sortChecksBtn');
+const shuffleBtn = document.getElementById('shuffleBtn');
 
 let currentTab = UI_CONFIG.TABS.PENDING;
 let allTasks = [];
@@ -190,6 +192,39 @@ tabCompleted.onclick = () => {
 };
 
 themeToggle.onclick = () => toggleTheme();
+
+/**
+ * Randomizes the position of pending tasks and persists the new order.
+ * Example: await shufflePendingTasks();
+ */
+async function shufflePendingTasks() {
+    const pendingTasks = allTasks.filter(t => !t.completed);
+    for (let i = pendingTasks.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pendingTasks[i], pendingTasks[j]] = [pendingTasks[j], pendingTasks[i]];
+    }
+    for (let i = 0; i < pendingTasks.length; i++) {
+        pendingTasks[i].position = i;
+        await window.api.updateTask(pendingTasks[i]);
+    }
+    renderTasks();
+}
+
+shuffleBtn.onclick = () => shufflePendingTasks();
+
+sortChecksBtn.onclick = async () => {
+    allTasks.sort((a, b) => {
+        if (b.completionCount !== a.completionCount) {
+            return b.completionCount - a.completionCount;
+        }
+        return a.position - b.position;
+    });
+    for (let i = 0; i < allTasks.length; i++) {
+        allTasks[i].position = i;
+        await window.api.updateTask(allTasks[i]);
+    }
+    renderTasks();
+};
 
 addBtn.onclick = async () => {
     const title = taskInput.value.trim();

@@ -81,9 +81,10 @@ header h1 {
     display: flex;
     background-color: var(--surface-color);
     border-bottom: 1px solid var(--border-color);
+    align-items: center;
 }
 
-.tabs button {
+.tabs button:not(#sortChecksBtn):not(#shuffleBtn) {
     flex: 1;
     padding: 15px;
     background: none;
@@ -96,19 +97,60 @@ header h1 {
     transition: all 0.2s;
 }
 
-.tabs button:hover {
+.tabs button:not(#sortChecksBtn):not(#shuffleBtn):hover {
     background-color: var(--hover-bg);
 }
 
-.tabs button.active {
+.tabs button:not(#sortChecksBtn):not(#shuffleBtn).active {
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
     font-weight: bold;
 }
 
-body.dark-mode .tabs button.active {
+body.dark-mode .tabs button:not(#sortChecksBtn):not(#shuffleBtn).active {
     color: #bb86fc; /* Lighter purple for dark mode visibility */
     border-bottom-color: #bb86fc;
+}
+
+#shuffleBtn,
+#sortChecksBtn {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-right: 10px;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#sortChecksBtn {
+    margin-right: 15px;
+}
+
+#shuffleBtn:hover,
+#sortChecksBtn:hover {
+    background-color: var(--primary-color);
+    color: white;
+    box-shadow: 0 2px 6px rgba(98, 0, 238, 0.2);
+}
+
+body.dark-mode #shuffleBtn,
+body.dark-mode #sortChecksBtn {
+    color: #bb86fc;
+    border-color: #bb86fc;
+}
+
+body.dark-mode #shuffleBtn:hover,
+body.dark-mode #sortChecksBtn:hover {
+    background-color: #bb86fc;
+    color: #121212;
+    box-shadow: 0 2px 6px rgba(187, 134, 252, 0.2);
 }
 
 #sync-status {
