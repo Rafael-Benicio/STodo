@@ -207,7 +207,7 @@ async function shufflePendingTasks() {
         pendingTasks[i].position = i;
         await window.api.updateTask(pendingTasks[i]);
     }
-    renderTasks();
+    await loadTasks();
 }
 
 shuffleBtn.onclick = () => shufflePendingTasks();
@@ -223,7 +223,7 @@ sortChecksBtn.onclick = async () => {
         allTasks[i].position = i;
         await window.api.updateTask(allTasks[i]);
     }
-    renderTasks();
+    await loadTasks();
 };
 
 addBtn.onclick = async () => {
