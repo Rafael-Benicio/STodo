@@ -82,11 +82,25 @@ function attachDragEvents(li) {
 }
 
 /**
- * Appends checkbox, title, and delete button to the task element.
- * @param {HTMLElement} li - The container element.
- * @param {Object} task - The task data.
+ * Applies or resets task styling based on its custom color.
+ * @param {HTMLElement} li - The task item container.
+ * @param {string|null} color - The hex color code or null.
+ * @example applyTaskColorStyle(li, '#e91e63');
  */
-function appendTaskContent(li, task) {
+function applyTaskColorStyle(li, color) {
+    if (!color) {
+        li.style.borderLeft = '';
+        li.style.background = '';
+        return;
+    }
+    li.style.borderLeft = `6px solid ${color}`;
+    li.style.background = `linear-gradient(90deg, ${color}22 0%, var(--surface-color) 45%)`;
+}
+
+/**
+ * Creates checkbox input element for task completion state.
+ */
+function createTaskCheckbox(task) {
     const checkbox = document.createElement('input');
     checkbox.type = 'checkbox';
     checkbox.checked = task.completed;
@@ -95,11 +109,64 @@ function appendTaskContent(li, task) {
         await window.api.updateTask(task);
         loadTasks();
     };
+    return checkbox;
+}
 
+/**
+ * Creates span element representing the task title.
+ */
+function createTaskTitle(task) {
     const span = document.createElement('span');
     span.className = 'task-title' + (task.completed ? ' completed' : '');
     span.innerText = task.title;
+    return span;
+}
 
+/**
+ * Appends a reset button to clear customized task color.
+ */
+function appendColorResetButton(container, li, task, colorInput) {
+    if (!task.color) return;
+    const resetBtn = document.createElement('button');
+    resetBtn.className = 'color-reset-btn';
+    resetBtn.innerText = '✕';
+    resetBtn.title = 'Remover cor personalizada';
+    resetBtn.onclick = async () => {
+        task.color = null;
+        colorInput.value = '#6200ee';
+        applyTaskColorStyle(li, null);
+        await window.api.updateTask(task);
+        resetBtn.remove();
+    };
+    container.appendChild(resetBtn);
+}
+
+/**
+ * Creates color picker controls to customize the task color.
+ */
+function createTaskColorControls(li, task) {
+    const container = document.createElement('div');
+    container.className = 'color-controls';
+    const colorInput = document.createElement('input');
+    colorInput.type = 'color';
+    colorInput.className = 'color-picker-input';
+    colorInput.value = task.color || '#6200ee';
+    colorInput.title = 'Escolher cor da tarefa';
+    colorInput.onchange = async () => {
+        task.color = colorInput.value;
+        applyTaskColorStyle(li, task.color);
+        await window.api.updateTask(task);
+        if (!container.querySelector('.color-reset-btn')) appendColorResetButton(container, li, task, colorInput);
+    };
+    container.appendChild(colorInput);
+    appendColorResetButton(container, li, task, colorInput);
+    return container;
+}
+
+/**
+ * Creates the deletion button for an individual task.
+ */
+function createTaskDeleteButton(task) {
     const deleteBtn = document.createElement('button');
     deleteBtn.innerText = 'Excluir';
     deleteBtn.className = 'delete-btn';
@@ -107,10 +174,18 @@ function appendTaskContent(li, task) {
         await window.api.deleteTask(task.id);
         loadTasks();
     };
+    return deleteBtn;
+}
 
-    li.appendChild(checkbox);
-    li.appendChild(span);
-    li.appendChild(deleteBtn);
+/**
+ * Appends all sub-components to the task item element.
+ */
+function appendTaskContent(li, task) {
+    applyTaskColorStyle(li, task.color);
+    li.appendChild(createTaskCheckbox(task));
+    li.appendChild(createTaskTitle(task));
+    li.appendChild(createTaskColorControls(li, task));
+    li.appendChild(createTaskDeleteButton(task));
 }
 
 /**

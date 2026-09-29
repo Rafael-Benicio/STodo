@@ -26,6 +26,7 @@ async function processClientPush(clientChanges) {
             await TaskRepository.insert(clientTask);
         } else if (clientTask.updatedAt > serverTask.updatedAt) {
             logger.info('Sync', `Updating server task with newer client data: ${clientTask.title}`);
+            if (!clientTask.color && serverTask.color) clientTask.color = serverTask.color;
             await TaskRepository.update(clientTask);
         } else {
             logger.info('Sync', `Client task ignored (older or equal): ${clientTask.title}`);

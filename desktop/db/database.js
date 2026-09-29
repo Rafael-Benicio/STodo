@@ -28,8 +28,10 @@ db.serialize(() => {
         position INTEGER DEFAULT 0,
         completion_count INTEGER DEFAULT 0,
         updated_at INTEGER DEFAULT 0,
-        is_deleted INTEGER DEFAULT 0
+        is_deleted INTEGER DEFAULT 0,
+        color TEXT DEFAULT NULL
     )`);
+    db.run(`ALTER TABLE ${DB_CONFIG.TABLE_NAME} ADD COLUMN color TEXT DEFAULT NULL`, () => {});
 });
 
 /**
@@ -46,7 +48,8 @@ const mapRowToTask = (row) => ({
     position: row.position,
     completionCount: row.completion_count,
     updatedAt: row.updated_at,
-    isDeleted: row.is_deleted === 1
+    isDeleted: row.is_deleted === 1,
+    color: row.color || null
 });
 
 /**
@@ -102,24 +105,18 @@ const TaskRepository = {
      * @param {Object} task - The task data to insert.
      */
     insert: (task) => {
-        const sql = `INSERT INTO ${DB_CONFIG.TABLE_NAME} (id, title, completed, auto_uncheck_minutes, uncheck_timestamp, position, completion_count, updated_at, is_deleted) 
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+        const sql = `INSERT INTO ${DB_CONFIG.TABLE_NAME} (id, title, completed, auto_uncheck_minutes, uncheck_timestamp, position, completion_count, updated_at, is_deleted, color) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
         const params = [
-            task.id || crypto.randomUUID(),
-            task.title,
+            task.id || crypto.randomUUID(), task.title,
             (task.completed === true || task.completed === 1) ? 1 : 0,
-            task.autoUncheckMinutes || 0,
-            task.uncheckTimestamp || 0,
-            task.position || 0,
-            task.completionCount || 0,
+            task.autoUncheckMinutes || 0, task.uncheckTimestamp || 0,
+            task.position || 0, task.completionCount || 0,
             task.updatedAt || Date.now(),
-            (task.isDeleted === true || task.isDeleted === 1) ? 1 : 0
+            (task.isDeleted === true || task.isDeleted === 1) ? 1 : 0,
+            task.color || null
         ];
         return new Promise((resolve, reject) => {
-            db.run(sql, params, function(err) {
-                if (err) reject(err);
-                else resolve();
-            });
+            db.run(sql, params, (err) => (err ? reject(err) : resolve()));
         });
     },
 
@@ -128,26 +125,18 @@ const TaskRepository = {
      * @param {Object} task - The task object with updated fields.
      */
     update: (task) => {
-        const sql = `UPDATE ${DB_CONFIG.TABLE_NAME} SET 
-            title = ?, completed = ?, auto_uncheck_minutes = ?, uncheck_timestamp = ?, 
-            position = ?, completion_count = ?, updated_at = ?, is_deleted = ? 
-            WHERE id = ?`;
+        const sql = `UPDATE ${DB_CONFIG.TABLE_NAME} SET title = ?, completed = ?, auto_uncheck_minutes = ?, uncheck_timestamp = ?, position = ?, completion_count = ?, updated_at = ?, is_deleted = ?, color = ? WHERE id = ?`;
         const params = [
             task.title,
             (task.completed === true || task.completed === 1) ? 1 : 0,
-            task.autoUncheckMinutes || 0,
-            task.uncheckTimestamp || 0,
-            task.position || 0,
-            task.completionCount || 0,
+            task.autoUncheckMinutes || 0, task.uncheckTimestamp || 0,
+            task.position || 0, task.completionCount || 0,
             task.updatedAt || Date.now(),
             (task.isDeleted === true || task.isDeleted === 1) ? 1 : 0,
-            task.id
+            task.color || null, task.id
         ];
         return new Promise((resolve, reject) => {
-            db.run(sql, params, (err) => {
-                if (err) reject(err);
-                else resolve();
-            });
+            db.run(sql, params, (err) => (err ? reject(err) : resolve()));
         });
     },
 
