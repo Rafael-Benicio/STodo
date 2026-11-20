@@ -11,5 +11,8 @@ contextBridge.exposeInMainWorld('api', {
     getPriorities: () => ipcRenderer.invoke('get-priorities'),
     addPriority: (priority) => ipcRenderer.invoke('add-priority', priority),
     updatePriority: (priority) => ipcRenderer.invoke('update-priority', priority),
-    deletePriority: (id) => ipcRenderer.invoke('delete-priority', id)
+    deletePriority: (id) => ipcRenderer.invoke('delete-priority', id),
+    onTasksAutoReset: (callback) => {
+        ipcRenderer.on('tasks-auto-reset', (event, count) => callback(count));
+    }
 });

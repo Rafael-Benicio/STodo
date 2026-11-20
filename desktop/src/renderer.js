@@ -235,25 +235,27 @@ function createCompletionBadge(task) {
 }
 
 /**
- * Creates the deletion button for an individual task.
+ * Creates the options button that opens the task configuration modal.
  * @param {Object} task - The task object.
- * @returns {HTMLButtonElement} The delete button.
- * @example const deleteBtn = createTaskDeleteButton(task);
+ * @param {HTMLElement} li - The parent list item element.
+ * @returns {HTMLButtonElement} The created options button.
+ * @example const btn = createTaskOptionsButton(task, li);
  */
-function createTaskDeleteButton(task) {
-    const deleteBtn = document.createElement('button');
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.innerText = '🗑️';
-    deleteBtn.title = 'Excluir';
-    deleteBtn.addEventListener('click', async () => {
-        await window.api.deleteTask(task.id);
-        loadTasks();
+function createTaskOptionsButton(task, li) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'options-btn';
+    btn.innerText = '⚙️';
+    btn.title = 'Opções da tarefa';
+    btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openTaskOptionsModal(task, li);
     });
-    return deleteBtn;
+    return btn;
 }
 
 /**
- * Appends interactive task contents (checkbox, title, badges, priority controls, delete button).
+ * Appends interactive task contents (checkbox, title, badges, options button).
  * @param {HTMLElement} li - The parent list item element.
  * @param {Object} task - The task object data.
  * @example appendTaskContent(li, task);
@@ -263,11 +265,12 @@ function appendTaskContent(li, task) {
 
     const actionsDiv = document.createElement('div');
     actionsDiv.className = 'task-actions';
-    actionsDiv.appendChild(createTaskPriorityControls(task, li));
-    actionsDiv.appendChild(createTaskDeleteButton(task));
+    actionsDiv.appendChild(createTaskOptionsButton(task, li));
 
     li.appendChild(createTaskCheckbox(task));
     li.appendChild(createTaskTitle(task));
+    const renewalBadge = createRenewalBadge(task);
+    if (renewalBadge) li.appendChild(renewalBadge);
     li.appendChild(createCompletionBadge(task));
     li.appendChild(actionsDiv);
 }
@@ -430,7 +433,9 @@ async function handleSortActionChange(e) {
 async function handleAddTask() {
     const title = taskInput.value.trim();
     if (!title) return;
-    await window.api.addTask({ title, completed: false });
+    const renewalSelect = document.getElementById('taskRenewalSelect');
+    const autoUncheckMinutes = renewalSelect ? parseInt(renewalSelect.value, 10) || 0 : 0;
+    await window.api.addTask({ title, completed: false, autoUncheckMinutes });
     taskInput.value = '';
     loadTasks();
 }
@@ -466,8 +471,12 @@ taskList.addEventListener('dragover', (e) => {
  */
 async function initializeApp() {
     initializeTheme();
+    initTaskModal();
     await loadPriorities();
     await loadTasks();
+    if (window.api.onTasksAutoReset) {
+        window.api.onTasksAutoReset(() => loadTasks());
+    }
     const savedTab = sessionStorage.getItem(UI_CONFIG.STORAGE_KEYS.ACTIVE_TAB);
     if (savedTab) switchTab(savedTab);
 }

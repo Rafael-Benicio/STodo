@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
-const { TaskRepository, PriorityRepository } = require('./db/database');
+const TaskService = require('./service/taskService');
+const { PriorityRepository } = require('./db/database');
 const logger = require('./logger');
 
 const APP_CONFIG = {
@@ -9,9 +10,14 @@ const APP_CONFIG = {
     TRAY_ICON_SIZE: 16
 };
 
+const TIMER_CONFIG = {
+    EXPIRATION_CHECK_MS: 30000
+};
+
 let mainWindow = null;
 let tray = null;
 let isQuitting = false;
+let expirationInterval = null;
 
 /**
  * Creates the main application browser window.
@@ -103,31 +109,39 @@ function createTray() {
 }
 
 /**
+ * Periodically checks for expired tasks and notifies the active window.
+ * @example startExpirationChecker();
+ */
+function startExpirationChecker() {
+    if (expirationInterval) return;
+    expirationInterval = setInterval(async () => {
+        const resetCount = await TaskService.resetExpiredTasks();
+        if (resetCount > 0 && mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('tasks-auto-reset', resetCount);
+        }
+    }, TIMER_CONFIG.EXPIRATION_CHECK_MS);
+}
+
+/**
+ * Stops the periodic expiration checker timer.
+ * @example stopExpirationChecker();
+ */
+function stopExpirationChecker() {
+    if (expirationInterval) {
+        clearInterval(expirationInterval);
+        expirationInterval = null;
+    }
+}
+
+/**
  * Registers IPC handlers for task entities.
  * @example registerTaskIpcHandlers();
  */
 function registerTaskIpcHandlers() {
-    ipcMain.handle('get-tasks', async () => await TaskRepository.getAll());
-
-    ipcMain.handle('add-task', async (event, task) => {
-        const maxPos = await TaskRepository.getMaxPosition();
-        task.position = maxPos + 1;
-        task.updatedAt = Date.now();
-        return await TaskRepository.insert(task);
-    });
-
-    ipcMain.handle('update-task', async (event, task) => {
-        task.updatedAt = Math.max(Date.now(), (task.updatedAt || 0) + 1);
-        return await TaskRepository.update(task);
-    });
-
-    ipcMain.handle('delete-task', async (event, id) => {
-        const task = await TaskRepository.getById(id);
-        if (!task) return null;
-        task.isDeleted = true;
-        task.updatedAt = Math.max(Date.now(), (task.updatedAt || 0) + 1);
-        return await TaskRepository.update(task);
-    });
+    ipcMain.handle('get-tasks', async () => await TaskService.getAllTasks());
+    ipcMain.handle('add-task', async (event, task) => await TaskService.addTask(task));
+    ipcMain.handle('update-task', async (event, task) => await TaskService.updateTask(task));
+    ipcMain.handle('delete-task', async (event, id) => await TaskService.deleteTask(id));
 }
 
 /**
@@ -157,6 +171,7 @@ app.on('ready', () => {
     createTray();
     registerTaskIpcHandlers();
     registerPriorityIpcHandlers();
+    startExpirationChecker();
     logger.info('App', 'STodo Desktop initialized successfully.');
 });
 
@@ -170,4 +185,5 @@ app.on('activate', () => {
 
 app.on('before-quit', () => {
     isQuitting = true;
+    stopExpirationChecker();
 });

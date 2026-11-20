@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>STodo Desktop</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="modal.css">
 </head>
 <body>
     <div class="container">
@@ -30,6 +31,12 @@
         <main>
             <section class="task-input" id="taskInputSection">
                 <input type="text" id="taskTitle" placeholder="O que precisa ser feito?">
+                <select id="taskRenewalSelect" class="renewal-input-select" title="Renovação automática">
+                    <option value="0" selected>Sem renovação</option>
+                    <option value="1440">Diário</option>
+                    <option value="2880">2 Dias</option>
+                    <option value="10080">Semanal (7d)</option>
+                </select>
                 <button id="addBtn">Adicionar</button>
             </section>
 
@@ -52,7 +59,33 @@
             </section>
         </main>
     </div>
+
+    <div id="taskModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTaskTitle">Configurações da Tarefa</h3>
+                <button type="button" id="modalCloseBtn" class="modal-close-btn" title="Fechar">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-row">
+                    <span class="modal-label">⏱️ Renovação Automática:</span>
+                    <div id="modalRenewalContainer"></div>
+                </div>
+                <div class="modal-row">
+                    <span class="modal-label">🎨 Prioridade & Cor:</span>
+                    <div id="modalPriorityContainer"></div>
+                </div>
+                <div class="modal-row modal-danger-row">
+                    <span class="modal-label">Exclusão:</span>
+                    <div id="modalDeleteContainer"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="autoUncheck.js"></script>
     <script src="priorities.js"></script>
+    <script src="taskModal.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>

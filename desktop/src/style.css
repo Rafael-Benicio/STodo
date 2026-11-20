@@ -421,3 +421,57 @@ input[type="checkbox"] {
 .priority-select:hover, .priority-select:focus {
     border-color: var(--primary-color);
 }
+
+.renewal-input-select {
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    cursor: pointer;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.renewal-input-select:hover, .renewal-input-select:focus {
+    border-color: var(--primary-color);
+}
+
+.renewal-select {
+    padding: 5px 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.8rem;
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    cursor: pointer;
+    max-width: 140px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.renewal-select:hover, .renewal-select:focus {
+    border-color: var(--primary-color);
+}
+
+.badge-renewal {
+    background-color: var(--hover-bg);
+    color: var(--text-secondary);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+    border: 1px solid var(--border-color);
+}
+
+.badge-count {
+    background-color: var(--hover-bg);
+    color: var(--text-secondary);
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    white-space: nowrap;
+}

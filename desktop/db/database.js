@@ -196,6 +196,28 @@ const TaskRepository = {
                 resolve(row && row.maxPos !== null ? row.maxPos : -1);
             });
         });
+    },
+
+    /**
+     * Resets completed tasks whose uncheck timestamp has passed back to active.
+     * @param {number} currentTimestamp - Current epoch timestamp.
+     * @returns {Promise<number>} Number of tasks that were reset.
+     * @example const count = await TaskRepository.resetExpiredTasks(Date.now());
+     */
+    resetExpiredTasks: (currentTimestamp) => {
+        const sql = `UPDATE ${DB_CONFIG.TABLE_TASKS} SET 
+            completed = ${DB_CONFIG.STATUS_ACTIVE}, 
+            uncheck_timestamp = ${DB_CONFIG.DEFAULT_TIMESTAMP},
+            updated_at = ?
+            WHERE completed = 1 
+              AND uncheck_timestamp > ${DB_CONFIG.DEFAULT_TIMESTAMP} 
+              AND uncheck_timestamp <= ?`;
+        return new Promise((resolve, reject) => {
+            db.run(sql, [currentTimestamp, currentTimestamp], function(err) {
+                if (err) return reject(err);
+                resolve(this.changes || 0);
+            });
+        });
     }
 };
 
