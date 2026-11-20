@@ -153,12 +153,7 @@ body.dark-mode #sortChecksBtn:hover {
     box-shadow: 0 2px 6px rgba(187, 134, 252, 0.2);
 }
 
-#sync-status {
-    font-size: 0.8em;
-    opacity: 0.8;
-    text-align: center;
-    margin-top: 10px;
-}
+
 
 .task-input {
     padding: 20px;
@@ -239,10 +234,43 @@ li:hover {
     color: var(--text-secondary);
 }
 
+.task-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
 .color-controls {
     display: flex;
     align-items: center;
     gap: 6px;
+}
+
+.color-suggestions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    max-width: 120px;
+    overflow-x: auto;
+}
+
+.color-swatch-suggestion {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--border-color);
+    cursor: pointer;
+    padding: 0;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.color-swatch-suggestion:hover {
+    transform: scale(1.25);
+    border-color: var(--text-color);
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 .color-picker-input {
@@ -312,4 +340,112 @@ input[type="checkbox"] {
     width: 20px;
     height: 20px;
     cursor: pointer;
+}
+
+.priority-input {
+    padding: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background-color: var(--input-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.priority-input input[type="text"] {
+    flex: 1;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 1rem;
+    background-color: var(--surface-color);
+    color: var(--text-color);
+}
+
+.priority-input input[type="color"] {
+    width: 44px;
+    height: 44px;
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    cursor: pointer;
+    background: none;
+    padding: 0;
+}
+
+.priority-input button {
+    padding: 10px 24px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+
+.priority-input button:hover {
+    background-color: var(--primary-dark);
+}
+
+.priority-list {
+    flex: 1;
+    padding: 20px;
+}
+
+.priority-item {
+    display: flex;
+    align-items: center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-color);
+    gap: 14px;
+    background-color: var(--surface-color);
+    transition: background-color 0.2s, border-left 0.3s;
+}
+
+.priority-item .priority-name {
+    font-weight: 600;
+    font-size: 1.05rem;
+    flex: 1;
+}
+
+.priority-color-picker {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    cursor: pointer;
+    background: none;
+    padding: 0;
+    transition: transform 0.2s;
+}
+
+.priority-color-picker:hover {
+    transform: scale(1.15);
+}
+
+.priority-color-picker::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.priority-color-picker::-webkit-color-swatch {
+    border: none;
+    border-radius: 50%;
+}
+
+.priority-select {
+    padding: 6px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    cursor: pointer;
+    max-width: 150px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.priority-select:hover, .priority-select:focus {
+    border-color: var(--primary-color);
 }

@@ -3,35 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>STodo - Desktop Hub</title>
+    <title>STodo Desktop</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="container">
         <header>
             <div class="header-content">
-                <h1>STodo Desktop Hub</h1>
+                <h1>STodo Desktop</h1>
                 <button id="themeToggle" title="Toggle Dark Mode">🌙</button>
             </div>
-            <div id="sync-status">Aguardando servidor...</div>
         </header>
 
         <nav class="tabs">
             <button id="tabPending" class="active">Pendentes</button>
             <button id="tabCompleted">Concluídas</button>
+            <button id="tabPriorities">Prioridades</button>
             <button id="shuffleBtn" title="Aleatorizar sequência de tarefas pendentes">🔀 Aleatorizar</button>
             <button id="sortChecksBtn" title="Ordenar por quantidade de checks">📊 Ordenar por Checks</button>
         </nav>
 
         <main>
-            <section class="task-input">
+            <section class="task-input" id="taskInputSection">
                 <input type="text" id="taskTitle" placeholder="O que precisa ser feito?">
                 <button id="addBtn">Adicionar</button>
             </section>
 
-            <section class="task-list">
+            <section class="priority-input" id="priorityInputSection" style="display: none;">
+                <input type="text" id="priorityName" placeholder="Nome da prioridade (ex: Urgente, Alta...)">
+                <input type="color" id="priorityColor" value="#e91e63" title="Escolha a cor da prioridade">
+                <button id="addPriorityBtn">Adicionar Prioridade</button>
+            </section>
+
+            <section class="task-list" id="taskListSection">
                 <ul id="tasks">
                     <!-- Tarefas aparecerão aqui -->
+                </ul>
+            </section>
+
+            <section class="priority-list" id="priorityListSection" style="display: none;">
+                <ul id="priorities">
+                    <!-- Prioridades aparecerão aqui -->
                 </ul>
             </section>
         </main>

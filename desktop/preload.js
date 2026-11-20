@@ -1,10 +1,15 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
+/**
+ * Exposes a secure, limited API surface to the renderer process.
+ */
 contextBridge.exposeInMainWorld('api', {
-    // Aqui adicionaremos as pontes para o banco de dados e sincronização
     getTasks: () => ipcRenderer.invoke('get-tasks'),
     addTask: (task) => ipcRenderer.invoke('add-task', task),
     updateTask: (task) => ipcRenderer.invoke('update-task', task),
     deleteTask: (id) => ipcRenderer.invoke('delete-task', id),
-    onRefreshTasks: (callback) => ipcRenderer.on('refresh-tasks', callback)
+    getPriorities: () => ipcRenderer.invoke('get-priorities'),
+    addPriority: (priority) => ipcRenderer.invoke('add-priority', priority),
+    updatePriority: (priority) => ipcRenderer.invoke('update-priority', priority),
+    deletePriority: (id) => ipcRenderer.invoke('delete-priority', id)
 });

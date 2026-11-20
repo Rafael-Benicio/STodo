@@ -1,27 +1,24 @@
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
-const { startSyncServer, processClientPush } = require('./server/sync-server');
-const { startMdnsService, getPeers } = require('./server/mdns-service');
-const TaskRepository = require('./db/database');
-const logger = require('./server/console-ansi-logger');
-
+const { TaskRepository, PriorityRepository } = require('./db/database');
+const logger = require('./logger');
 
 const APP_CONFIG = {
     WINDOW_WIDTH: 1000,
     WINDOW_HEIGHT: 700,
-    SYNC_PORT: 8080
+    TRAY_ICON_SIZE: 16
 };
 
-let mainWindow;
-let tray;
+let mainWindow = null;
+let tray = null;
 let isQuitting = false;
 
 /**
- * Creates the main application window.
+ * Creates the main application browser window.
+ * @example createWindow();
  */
 function createWindow() {
     Menu.setApplicationMenu(null);
-
     mainWindow = new BrowserWindow({
         width: APP_CONFIG.WINDOW_WIDTH,
         height: APP_CONFIG.WINDOW_HEIGHT,
@@ -35,8 +32,14 @@ function createWindow() {
     });
 
     mainWindow.loadFile(path.join(__dirname, 'src/index.html'));
+    attachWindowEvents();
+}
 
-    // Prevent window destruction on close, hide to tray instead
+/**
+ * Attaches lifecycle event listeners to the main window.
+ * @example attachWindowEvents();
+ */
+function attachWindowEvents() {
     mainWindow.on('close', (event) => {
         if (!isQuitting) {
             event.preventDefault();
@@ -51,168 +54,120 @@ function createWindow() {
 }
 
 /**
- * Initializes the system tray icon and context menu.
+ * Displays the main window or instantiates it if not present.
+ * @example showMainWindow();
+ */
+function showMainWindow() {
+    if (mainWindow) {
+        mainWindow.show();
+        return;
+    }
+    createWindow();
+}
+
+/**
+ * Builds the context menu template for the system tray icon.
+ * @returns {Menu} The constructed Electron menu instance.
+ * @example const menu = buildTrayContextMenu();
+ */
+function buildTrayContextMenu() {
+    return Menu.buildFromTemplate([
+        {
+            label: 'Open STodo',
+            click: () => showMainWindow()
+        },
+        { type: 'separator' },
+        {
+            label: 'Quit',
+            click: () => {
+                isQuitting = true;
+                app.quit();
+            }
+        }
+    ]);
+}
+
+/**
+ * Initializes the system tray icon and attaches user click listeners.
+ * @example createTray();
  */
 function createTray() {
     const iconPath = path.join(__dirname, 'icon.png');
     const icon = nativeImage.createFromPath(iconPath);
-    tray = new Tray(icon.resize({ width: 16, height: 16 }));
+    tray = new Tray(icon.resize({ width: APP_CONFIG.TRAY_ICON_SIZE, height: APP_CONFIG.TRAY_ICON_SIZE }));
 
-    const contextMenu = Menu.buildFromTemplate([
-        { 
-            label: 'Open STodo', 
-            click: () => {
-                if (mainWindow) mainWindow.show();
-                else createWindow();
-            } 
-        },
-        { type: 'separator' },
-        { 
-            label: 'Quit', 
-            click: () => {
-                isQuitting = true;
-                app.quit();
-            } 
-        }
-    ]);
+    tray.setToolTip('STodo Desktop');
+    tray.setContextMenu(buildTrayContextMenu());
+    tray.on('click', () => showMainWindow());
+    tray.on('double-click', () => showMainWindow());
+}
 
-    tray.setToolTip('STodo Desktop Hub');
-    tray.setContextMenu(contextMenu);
+/**
+ * Registers IPC handlers for task entities.
+ * @example registerTaskIpcHandlers();
+ */
+function registerTaskIpcHandlers() {
+    ipcMain.handle('get-tasks', async () => await TaskRepository.getAll());
 
-    // Restore window on single left click
-    tray.on('click', () => {
-        if (mainWindow) mainWindow.show();
-        else createWindow();
+    ipcMain.handle('add-task', async (event, task) => {
+        const maxPos = await TaskRepository.getMaxPosition();
+        task.position = maxPos + 1;
+        task.updatedAt = Date.now();
+        return await TaskRepository.insert(task);
     });
 
-    // Support for platforms where double-click is preferred
-    tray.on('double-click', () => {
-        if (mainWindow) mainWindow.show();
-        else createWindow();
+    ipcMain.handle('update-task', async (event, task) => {
+        task.updatedAt = Math.max(Date.now(), (task.updatedAt || 0) + 1);
+        return await TaskRepository.update(task);
     });
-}
 
-const lastSyncs = new Map();
-let syncTimeout = null;
-
-/**
- * Triggers a debounced sync call to all discovered peers.
- */
-function triggerPeerSync() {
-    if (syncTimeout) clearTimeout(syncTimeout);
-    syncTimeout = setTimeout(pushChangesToPeers, 500);
-}
-
-/**
- * Sends local modifications to all discovered mobile peers.
- */
-async function pushChangesToPeers() {
-    const peersList = getPeers();
-    if (peersList.length === 0) return;
-    for (const peer of peersList) {
-        try {
-            await syncWithPeer(peer);
-        } catch (err) {
-            logger.error('Sync', `Failed to sync with peer ${peer.name}: ${err.message}`);
-        }
-    }
-}
-
-/**
- * Performs a Push/Pull sync request to a specific peer.
- */
-async function syncWithPeer(peer) {
-    const lastSync = lastSyncs.get(peer.name) || 0;
-    const localChanges = await TaskRepository.getForSync(lastSync);
-    const payload = {
-        protocolVersion: 1,
-        lastSyncTimestamp: lastSync,
-        clientChanges: localChanges
-    };
-    const response = await fetch(`http://${peer.host}:${peer.port}/api/v1/sync`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    });
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const responseData = await response.json();
-    await handlePeerSyncResponse(peer.name, responseData);
-    logger.info('Sync', `Successfully synchronized with peer ${peer.name}: sent ${localChanges.length} local changes, received ${responseData.serverChanges ? responseData.serverChanges.length : 0} changes`);
-}
-
-/**
- * Processes incoming changes from a peer sync response.
- */
-async function handlePeerSyncResponse(peerName, responseData) {
-    const { serverTimestamp, serverChanges } = responseData;
-    if (serverChanges && serverChanges.length > 0) {
-        await processClientPush(serverChanges);
-        if (mainWindow) mainWindow.webContents.send('refresh-tasks');
-    }
-    lastSyncs.set(peerName, serverTimestamp);
-}
-
-// IPC Handlers (UI -> DB)
-ipcMain.handle('get-tasks', async () => {
-    return await TaskRepository.getAll();
-});
-
-ipcMain.handle('add-task', async (event, task) => {
-    const maxPos = await TaskRepository.getMaxPosition();
-    task.position = maxPos + 1;
-    task.updatedAt = Date.now();
-    const result = await TaskRepository.insert(task);
-    triggerPeerSync();
-    return result;
-});
-
-ipcMain.handle('update-task', async (event, task) => {
-    task.updatedAt = Math.max(Date.now(), (task.updatedAt || 0) + 1);
-    const result = await TaskRepository.update(task);
-    triggerPeerSync();
-    return result;
-});
-
-ipcMain.handle('delete-task', async (event, id) => {
-    const task = await TaskRepository.getById(id);
-    if (task) {
+    ipcMain.handle('delete-task', async (event, id) => {
+        const task = await TaskRepository.getById(id);
+        if (!task) return null;
         task.isDeleted = true;
         task.updatedAt = Math.max(Date.now(), (task.updatedAt || 0) + 1);
-        const result = await TaskRepository.update(task);
-        triggerPeerSync();
-        return result;
-    }
-});
+        return await TaskRepository.update(task);
+    });
+}
+
+/**
+ * Registers IPC handlers for priority categories.
+ * @example registerPriorityIpcHandlers();
+ */
+function registerPriorityIpcHandlers() {
+    ipcMain.handle('get-priorities', async () => {
+        return await PriorityRepository.getAll();
+    });
+
+    ipcMain.handle('add-priority', async (event, priority) => {
+        return await PriorityRepository.insert(priority);
+    });
+
+    ipcMain.handle('update-priority', async (event, priority) => {
+        return await PriorityRepository.update(priority);
+    });
+
+    ipcMain.handle('delete-priority', async (event, id) => {
+        return await PriorityRepository.delete(id);
+    });
+}
 
 app.on('ready', () => {
     createWindow();
     createTray();
-    
-    startSyncServer(APP_CONFIG.SYNC_PORT, () => {
-        if (mainWindow) {
-            mainWindow.webContents.send('refresh-tasks');
-        }
-    });
-    startMdnsService(APP_CONFIG.SYNC_PORT, (peers) => {
-        triggerPeerSync();
-    });
-    
-    logger.info('App', 'STodo Desktop Hub initialized in background.');
+    registerTaskIpcHandlers();
+    registerPriorityIpcHandlers();
+    logger.info('App', 'STodo Desktop initialized successfully.');
 });
 
-// Keep the process running when windows are hidden
 app.on('window-all-closed', () => {
-    if (process.platform !== 'darwin') {
-        // App stays in tray
-    }
+    // Process stays alive in tray until explicit quit
 });
 
 app.on('activate', () => {
-    if (mainWindow === null) createWindow();
-    else mainWindow.show();
+    showMainWindow();
 });
 
-// Ensure flag is set before quitting
 app.on('before-quit', () => {
     isQuitting = true;
 });
