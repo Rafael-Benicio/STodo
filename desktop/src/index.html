@@ -19,8 +19,12 @@
             <button id="tabPending" class="active">Pendentes</button>
             <button id="tabCompleted">Concluídas</button>
             <button id="tabPriorities">Prioridades</button>
-            <button id="shuffleBtn" title="Aleatorizar sequência de tarefas pendentes">🔀 Aleatorizar</button>
-            <button id="sortChecksBtn" title="Ordenar por quantidade de checks">📊 Ordenar por Checks</button>
+            <select id="sortActionsSelect" class="sort-dropdown" title="Opções de ordenação">
+                <option value="" disabled selected>⚡ Organizar...</option>
+                <option value="shuffle">🔀 Aleatorizar</option>
+                <option value="checks">📊 Ordenar por Checks</option>
+                <option value="color">🎨 Agrupar por Cor</option>
+            </select>
         </nav>
 
         <main>
@@ -48,6 +52,7 @@
             </section>
         </main>
     </div>
+    <script src="priorities.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>

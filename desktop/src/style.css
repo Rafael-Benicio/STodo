@@ -84,7 +84,7 @@ header h1 {
     align-items: center;
 }
 
-.tabs button:not(#sortChecksBtn):not(#shuffleBtn) {
+.tabs button {
     flex: 1;
     padding: 15px;
     background: none;
@@ -97,24 +97,23 @@ header h1 {
     transition: all 0.2s;
 }
 
-.tabs button:not(#sortChecksBtn):not(#shuffleBtn):hover {
+.tabs button:hover {
     background-color: var(--hover-bg);
 }
 
-.tabs button:not(#sortChecksBtn):not(#shuffleBtn).active {
+.tabs button.active {
     color: var(--primary-color);
     border-bottom-color: var(--primary-color);
     font-weight: bold;
 }
 
-body.dark-mode .tabs button:not(#sortChecksBtn):not(#shuffleBtn).active {
-    color: #bb86fc; /* Lighter purple for dark mode visibility */
+body.dark-mode .tabs button.active {
+    color: #bb86fc;
     border-bottom-color: #bb86fc;
 }
 
-#shuffleBtn,
-#sortChecksBtn {
-    background-color: transparent;
+.sort-dropdown {
+    background-color: var(--surface-color);
     color: var(--primary-color);
     border: 1px solid var(--primary-color);
     border-radius: 20px;
@@ -122,32 +121,31 @@ body.dark-mode .tabs button:not(#sortChecksBtn):not(#shuffleBtn).active {
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    margin-right: 10px;
-    transition: all 0.2s ease-in-out;
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-
-#sortChecksBtn {
     margin-right: 15px;
+    margin-left: 10px;
+    outline: none;
+    transition: all 0.2s ease-in-out;
 }
 
-#shuffleBtn:hover,
-#sortChecksBtn:hover {
+.sort-dropdown:hover,
+.sort-dropdown:focus {
     background-color: var(--primary-color);
     color: white;
     box-shadow: 0 2px 6px rgba(98, 0, 238, 0.2);
 }
 
-body.dark-mode #shuffleBtn,
-body.dark-mode #sortChecksBtn {
+.sort-dropdown option {
+    background-color: var(--surface-color);
+    color: var(--text-color);
+}
+
+body.dark-mode .sort-dropdown {
     color: #bb86fc;
     border-color: #bb86fc;
 }
 
-body.dark-mode #shuffleBtn:hover,
-body.dark-mode #sortChecksBtn:hover {
+body.dark-mode .sort-dropdown:hover,
+body.dark-mode .sort-dropdown:focus {
     background-color: #bb86fc;
     color: #121212;
     box-shadow: 0 2px 6px rgba(187, 134, 252, 0.2);
@@ -245,32 +243,6 @@ li:hover {
     display: flex;
     align-items: center;
     gap: 6px;
-}
-
-.color-suggestions {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    max-width: 120px;
-    overflow-x: auto;
-}
-
-.color-swatch-suggestion {
-    width: 18px;
-    height: 18px;
-    border-radius: 50%;
-    border: 2px solid var(--border-color);
-    cursor: pointer;
-    padding: 0;
-    box-sizing: border-box;
-    flex-shrink: 0;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-
-.color-swatch-suggestion:hover {
-    transform: scale(1.25);
-    border-color: var(--text-color);
-    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
 }
 
 .color-picker-input {

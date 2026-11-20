@@ -1,7 +1,7 @@
 const UI_CONFIG = {
     TABS: { PENDING: 'pending', COMPLETED: 'completed', PRIORITIES: 'priorities' },
     CLASS_DRAGGING: 'dragging',
-    STORAGE_KEYS: { THEME: 'stodo_theme' },
+    STORAGE_KEYS: { THEME: 'stodo_theme', ACTIVE_TAB: 'stodo_active_tab' },
     THEMES: { DARK: 'dark-mode', LIGHT: 'light-mode' }
 };
 
@@ -23,13 +23,11 @@ const priorityListSection = document.getElementById('priorityListSection');
 const tabPending = document.getElementById('tabPending');
 const tabCompleted = document.getElementById('tabCompleted');
 const tabPriorities = document.getElementById('tabPriorities');
-const sortChecksBtn = document.getElementById('sortChecksBtn');
-const shuffleBtn = document.getElementById('shuffleBtn');
+const sortActionsSelect = document.getElementById('sortActionsSelect');
 const addPriorityBtn = document.getElementById('addPriorityBtn');
 
 let currentTab = UI_CONFIG.TABS.PENDING;
 let allTasks = [];
-let allPriorities = [];
 
 /**
  * Loads and applies the saved theme preference from storage.
@@ -57,14 +55,6 @@ function toggleTheme() {
 }
 
 /**
- * Loads all priorities from the database.
- * @example await loadPriorities();
- */
-async function loadPriorities() {
-    allPriorities = await window.api.getPriorities();
-}
-
-/**
  * Loads all tasks from the database and triggers a UI re-render.
  * @example await loadTasks();
  */
@@ -87,10 +77,8 @@ function createTaskElement(task) {
     const li = document.createElement('li');
     li.draggable = true;
     li.dataset.id = task.id;
-    
     attachDragEvents(li);
     appendTaskContent(li, task);
-    
     return li;
 }
 
@@ -124,28 +112,6 @@ function applyTaskColorStyle(li, color) {
 }
 
 /**
- * Fills priority dropdown select element with existing priority choices.
- * @param {HTMLSelectElement} select - Target select element.
- * @param {string|null} currentPriorityId - Currently selected priority id.
- * @example populatePrioritySelectOptions(select, 'p-1');
- */
-function populatePrioritySelectOptions(select, currentPriorityId) {
-    const defaultOption = document.createElement('option');
-    defaultOption.value = '';
-    defaultOption.innerText = 'Sem prioridade';
-    defaultOption.selected = !currentPriorityId;
-    select.appendChild(defaultOption);
-
-    for (const priority of allPriorities) {
-        const option = document.createElement('option');
-        option.value = priority.id;
-        option.innerText = `● ${priority.name}`;
-        option.selected = currentPriorityId === priority.id;
-        select.appendChild(option);
-    }
-}
-
-/**
  * Assigns a chosen priority to a task and updates UI styling.
  * @param {Object} task - Target task.
  * @param {string|null} priorityId - Selected priority ID.
@@ -176,33 +142,6 @@ function attachPrioritySelectEvent(select, task, li) {
 }
 
 /**
- * Creates visual quick-select swatches for all registered priorities.
- * @param {Object} task - Current task.
- * @param {HTMLElement} li - Task item container.
- * @param {HTMLSelectElement} select - Synchronized select element.
- * @returns {HTMLElement} Container with priority swatches.
- * @example const swatches = createPrioritySwatches(task, li, select);
- */
-function createPrioritySwatches(task, li, select) {
-    const container = document.createElement('div');
-    container.className = 'color-suggestions';
-    for (const p of allPriorities) {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'color-swatch-suggestion';
-        btn.style.backgroundColor = p.color;
-        btn.title = `Prioridade: ${p.name}`;
-        btn.onclick = async (e) => {
-            e.stopPropagation();
-            select.value = p.id;
-            await assignPriorityToTask(task, p.id, li);
-        };
-        container.appendChild(btn);
-    }
-    return container;
-}
-
-/**
  * Creates reset button to clear priority and custom color from task.
  * @param {Object} task - Current task.
  * @param {HTMLElement} li - Task container element.
@@ -226,7 +165,7 @@ function createPriorityResetButton(task, li, select) {
 }
 
 /**
- * Builds priority controls for a task: priority select dropdown, swatches, and reset button.
+ * Builds priority controls for a task: priority select dropdown and reset button.
  * @param {Object} task - The task data.
  * @param {HTMLElement} li - The list item element.
  * @returns {HTMLElement} Container with priority selection controls.
@@ -243,9 +182,7 @@ function createTaskPriorityControls(task, li) {
     populatePrioritySelectOptions(select, task.priorityId);
     attachPrioritySelectEvent(select, task, li);
 
-    container.appendChild(createPrioritySwatches(task, li, select));
     container.appendChild(select);
-
     const resetBtn = createPriorityResetButton(task, li, select);
     if (resetBtn) container.appendChild(resetBtn);
 
@@ -371,93 +308,6 @@ function renderTasks() {
 }
 
 /**
- * Creates color input for a priority item, updating linked tasks reactively.
- * @param {Object} priority - The priority data.
- * @param {HTMLElement} li - The parent list item.
- * @returns {HTMLInputElement} The color input element.
- * @example const input = createPriorityColorInput(priority, li);
- */
-function createPriorityColorInput(priority, li) {
-    const input = document.createElement('input');
-    input.type = 'color';
-    input.className = 'priority-color-picker';
-    input.value = priority.color;
-    input.title = 'Alterar cor da prioridade';
-    input.onchange = async (e) => {
-        priority.color = e.target.value;
-        li.style.borderLeft = `6px solid ${priority.color}`;
-        await window.api.updatePriority(priority);
-        await loadTasks();
-        await loadPriorities();
-    };
-    return input;
-}
-
-/**
- * Creates delete button for a priority item in the list.
- * @param {string} priorityId - Identifier of priority to delete.
- * @returns {HTMLButtonElement} Delete button element.
- * @example const btn = createPriorityDeleteButton('p-1');
- */
-function createPriorityDeleteButton(priorityId) {
-    const btn = document.createElement('button');
-    btn.className = 'delete-btn';
-    btn.innerText = '🗑️';
-    btn.title = 'Excluir prioridade';
-    btn.onclick = async () => {
-        await window.api.deletePriority(priorityId);
-        await loadPriorities();
-        await loadTasks();
-    };
-    return btn;
-}
-
-/**
- * Creates single priority list item for the priorities tab.
- * @param {Object} priority - Priority entity.
- * @returns {HTMLElement} The created list item.
- * @example const li = createPriorityElement(priority);
- */
-function createPriorityElement(priority) {
-    const li = document.createElement('li');
-    li.className = 'priority-item';
-    li.style.borderLeft = `6px solid ${priority.color}`;
-
-    const colorInput = createPriorityColorInput(priority, li);
-
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'priority-name';
-    nameSpan.innerText = priority.name;
-
-    const count = allTasks.filter(t => t.priorityId === priority.id).length;
-    const countBadge = document.createElement('span');
-    countBadge.className = 'badge-count';
-    countBadge.innerText = `${count} tarefa(s)`;
-
-    li.appendChild(colorInput);
-    li.appendChild(nameSpan);
-    li.appendChild(countBadge);
-    li.appendChild(createPriorityDeleteButton(priority.id));
-    return li;
-}
-
-/**
- * Renders the priorities list in the priorities tab.
- * @example renderPriorities();
- */
-function renderPriorities() {
-    const list = document.getElementById('priorities');
-    list.innerHTML = '';
-    if (allPriorities.length === 0) {
-        list.innerHTML = '<li class="empty-state">Nenhuma prioridade cadastrada. Crie uma acima!</li>';
-        return;
-    }
-    allPriorities.forEach(priority => {
-        list.appendChild(createPriorityElement(priority));
-    });
-}
-
-/**
  * Adjusts container visibility based on the active tab.
  * @param {boolean} isPriorities - Whether the priorities tab is selected.
  * @param {boolean} isPending - Whether the pending tab is selected.
@@ -468,8 +318,7 @@ function updateTabContainers(isPriorities, isPending) {
     taskListSection.style.display = isPriorities ? 'none' : 'block';
     priorityInputSection.style.display = isPriorities ? 'flex' : 'none';
     priorityListSection.style.display = isPriorities ? 'block' : 'none';
-    shuffleBtn.style.display = isPriorities ? 'none' : 'inline-block';
-    sortChecksBtn.style.display = isPriorities ? 'none' : 'inline-block';
+    sortActionsSelect.style.display = isPriorities ? 'none' : 'inline-block';
 }
 
 /**
@@ -479,6 +328,7 @@ function updateTabContainers(isPriorities, isPending) {
  */
 function switchTab(tabName) {
     currentTab = tabName;
+    sessionStorage.setItem(UI_CONFIG.STORAGE_KEYS.ACTIVE_TAB, tabName);
     const isPending = tabName === UI_CONFIG.TABS.PENDING;
     const isCompleted = tabName === UI_CONFIG.TABS.COMPLETED;
     const isPriorities = tabName === UI_CONFIG.TABS.PRIORITIES;
@@ -488,7 +338,6 @@ function switchTab(tabName) {
     tabPriorities.classList.toggle('active', isPriorities);
 
     updateTabContainers(isPriorities, isPending);
-
     if (isPriorities) {
         renderPriorities();
         return;
@@ -506,11 +355,11 @@ async function shufflePendingTasks() {
         const j = Math.floor(Math.random() * (i + 1));
         [pendingTasks[i], pendingTasks[j]] = [pendingTasks[j], pendingTasks[i]];
     }
-    for (let i = 0; i < pendingTasks.length; i++) {
-        pendingTasks[i].position = i;
-        await window.api.updateTask(pendingTasks[i]);
-    }
-    await loadTasks();
+    const updates = pendingTasks.map((task, index) => {
+        task.position = index;
+        return window.api.updateTask(task);
+    });
+    await Promise.all(updates);
 }
 
 /**
@@ -524,11 +373,54 @@ async function sortTasksByChecks() {
         }
         return a.position - b.position;
     });
-    for (let i = 0; i < allTasks.length; i++) {
-        allTasks[i].position = i;
-        await window.api.updateTask(allTasks[i]);
-    }
-    await loadTasks();
+    const updates = allTasks.map((task, index) => {
+        task.position = index;
+        return window.api.updateTask(task);
+    });
+    await Promise.all(updates);
+}
+
+/**
+ * Compares two tasks by their assigned color to group them together.
+ * @param {Object} a - First task entity.
+ * @param {Object} b - Second task entity.
+ * @returns {number} Comparison sorting order.
+ * @example const order = compareTasksByColor(task1, task2);
+ */
+function compareTasksByColor(a, b) {
+    const colorA = a.color || '';
+    const colorB = b.color || '';
+    if (!colorA && colorB) return 1;
+    if (colorA && !colorB) return -1;
+    if (colorA !== colorB) return colorA.localeCompare(colorB);
+    return a.position - b.position;
+}
+
+/**
+ * Reorders tasks grouping them by their assigned color and persists order.
+ * @example await groupTasksByColor();
+ */
+async function groupTasksByColor() {
+    allTasks.sort(compareTasksByColor);
+    const updates = allTasks.map((task, index) => {
+        task.position = index;
+        return window.api.updateTask(task);
+    });
+    await Promise.all(updates);
+}
+
+/**
+ * Handles selection from the sort actions dropdown menu.
+ * @param {Event} e - Change event.
+ * @example await handleSortActionChange(event);
+ */
+async function handleSortActionChange(e) {
+    const action = e.target.value;
+    if (!action) return;
+    if (action === 'shuffle') await shufflePendingTasks();
+    if (action === 'checks') await sortTasksByChecks();
+    if (action === 'color') await groupTasksByColor();
+    window.location.reload();
 }
 
 /**
@@ -543,32 +435,12 @@ async function handleAddTask() {
     loadTasks();
 }
 
-/**
- * Adds a new priority category from the priority input form.
- * @example await handleAddPriority();
- */
-async function handleAddPriority() {
-    const nameInput = document.getElementById('priorityName');
-    const colorInput = document.getElementById('priorityColor');
-    const name = nameInput.value.trim();
-    if (!name) return;
-
-    await window.api.addPriority({
-        name,
-        color: colorInput.value || COLOR_CONFIG.DEFAULT
-    });
-    nameInput.value = '';
-    await loadPriorities();
-    renderPriorities();
-}
-
 // Event Listeners setup
 themeToggle.onclick = toggleTheme;
 tabPending.onclick = () => switchTab(UI_CONFIG.TABS.PENDING);
 tabCompleted.onclick = () => switchTab(UI_CONFIG.TABS.COMPLETED);
 tabPriorities.onclick = () => switchTab(UI_CONFIG.TABS.PRIORITIES);
-shuffleBtn.onclick = shufflePendingTasks;
-sortChecksBtn.onclick = sortTasksByChecks;
+sortActionsSelect.onchange = handleSortActionChange;
 addBtn.onclick = handleAddTask;
 addPriorityBtn.onclick = handleAddPriority;
 taskInput.onkeypress = (e) => { if (e.key === 'Enter') handleAddTask(); };
@@ -588,11 +460,16 @@ taskList.addEventListener('dragover', (e) => {
     taskList.insertBefore(draggingItem, nextSibling);
 });
 
-// App Initialization
+/**
+ * Bootstraps the application, restoring state and rendering initial views.
+ * @example await initializeApp();
+ */
 async function initializeApp() {
     initializeTheme();
     await loadPriorities();
     await loadTasks();
+    const savedTab = sessionStorage.getItem(UI_CONFIG.STORAGE_KEYS.ACTIVE_TAB);
+    if (savedTab) switchTab(savedTab);
 }
 
 initializeApp();
