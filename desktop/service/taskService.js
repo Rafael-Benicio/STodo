@@ -1,4 +1,5 @@
 const { TaskRepository } = require('../db/database');
+const PriorityService = require('./priorityService');
 
 const TIME_CONFIG = {
     MINUTES_PER_DAY: 1440,
@@ -79,15 +80,28 @@ const TaskService = {
     },
 
     /**
-     * Updates an existing task after computing renewal timestamp.
+     * Updates an existing task after computing renewal timestamp and color batch reset.
      * @param {Object} task - Task data to update.
-     * @returns {Promise<void>}
+     * @returns {Promise<Object>} Updated task and batch reset count.
      * @example await TaskService.updateTask(task);
      */
     updateTask: async (task) => {
         task.updatedAt = Math.max(Date.now(), (task.updatedAt || 0) + 1);
         calculateUncheckTimestamp(task);
-        return await TaskRepository.update(task);
+        await TaskRepository.update(task);
+
+        let batchResetCount = 0;
+        const isCompleted = task.completed === true || task.completed === 1;
+        if (isCompleted && task.priorityId) {
+            const priority = await PriorityService.getPriorityById(task.priorityId);
+            if (priority && priority.autoResetOnComplete) {
+                batchResetCount = await TaskRepository.resetPriorityTasksIfAllCompleted(
+                    task.priorityId, 
+                    task.updatedAt
+                );
+            }
+        }
+        return { task, batchResetCount };
     },
 
     /**

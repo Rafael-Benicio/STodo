@@ -46,8 +46,10 @@ db.serialize(() => {
         name TEXT NOT NULL,
         color TEXT NOT NULL,
         position INTEGER DEFAULT 0,
-        created_at INTEGER
+        created_at INTEGER,
+        auto_reset_on_complete INTEGER DEFAULT 0
     )`);
+    db.run(`ALTER TABLE ${DB_CONFIG.TABLE_PRIORITIES} ADD COLUMN auto_reset_on_complete INTEGER DEFAULT 0`, () => {});
 });
 
 /**
@@ -80,7 +82,8 @@ const mapRowToPriority = (row) => ({
     name: row.name,
     color: row.color,
     position: row.position,
-    createdAt: row.created_at
+    createdAt: row.created_at,
+    autoResetOnComplete: row.auto_reset_on_complete === 1
 });
 
 /**
@@ -218,6 +221,37 @@ const TaskRepository = {
                 resolve(this.changes || 0);
             });
         });
+    },
+
+    /**
+     * Checks if all active tasks of a priority are completed, and resets them if so.
+     * @param {string} priorityId - Target priority identifier.
+     * @param {number} timestamp - Updated timestamp.
+     * @returns {Promise<number>} Number of tasks reset, or 0 if not all completed.
+     * @example const count = await TaskRepository.resetPriorityTasksIfAllCompleted('p-1', Date.now());
+     */
+    resetPriorityTasksIfAllCompleted: (priorityId, timestamp) => {
+        const countQuery = `SELECT COUNT(*) as total, 
+                            SUM(CASE WHEN completed = 1 THEN 1 ELSE 0 END) as completedCount 
+                            FROM ${DB_CONFIG.TABLE_TASKS} 
+                            WHERE priority_id = ? AND is_deleted = ${DB_CONFIG.STATUS_ACTIVE}`;
+        const resetQuery = `UPDATE ${DB_CONFIG.TABLE_TASKS} SET 
+                            completed = ${DB_CONFIG.STATUS_ACTIVE}, 
+                            uncheck_timestamp = ${DB_CONFIG.DEFAULT_TIMESTAMP}, 
+                            updated_at = ? 
+                            WHERE priority_id = ? AND is_deleted = ${DB_CONFIG.STATUS_ACTIVE}`;
+        return new Promise((resolve, reject) => {
+            db.get(countQuery, [priorityId], (err, row) => {
+                if (err) return reject(err);
+                const total = row ? row.total : 0;
+                const completed = row ? row.completedCount : 0;
+                if (total === 0 || total !== completed) return resolve(0);
+                db.run(resetQuery, [timestamp, priorityId], function(updateErr) {
+                    if (updateErr) return reject(updateErr);
+                    resolve(this.changes || 0);
+                });
+            });
+        });
     }
 };
 
@@ -263,13 +297,16 @@ const PriorityRepository = {
      * @example await PriorityRepository.insert({ name: 'High', color: '#ff0000' });
      */
     insert: (priority) => {
-        const sql = `INSERT INTO ${DB_CONFIG.TABLE_PRIORITIES} (id, name, color, position, created_at) VALUES (?, ?, ?, ?, ?)`;
+        const sql = `INSERT INTO ${DB_CONFIG.TABLE_PRIORITIES} 
+            (id, name, color, position, created_at, auto_reset_on_complete) 
+            VALUES (?, ?, ?, ?, ?, ?)`;
         const params = [
             priority.id || crypto.randomUUID(),
             priority.name,
             priority.color || DB_CONFIG.DEFAULT_PRIORITY_COLOR,
             priority.position || DB_CONFIG.DEFAULT_POSITION,
-            priority.createdAt || Date.now()
+            priority.createdAt || Date.now(),
+            priority.autoResetOnComplete ? 1 : 0
         ];
         return new Promise((resolve, reject) => {
             db.run(sql, params, (err) => (err ? reject(err) : resolve()));
@@ -277,17 +314,20 @@ const PriorityRepository = {
     },
 
     /**
-     * Updates an existing priority category's name, color, and position.
+     * Updates an existing priority category's name, color, position, and auto-reset.
      * @param {Object} priority - The priority data with updated values.
      * @returns {Promise<void>}
      * @example await PriorityRepository.update(priority);
      */
     update: (priority) => {
-        const sql = `UPDATE ${DB_CONFIG.TABLE_PRIORITIES} SET name = ?, color = ?, position = ? WHERE id = ?`;
+        const sql = `UPDATE ${DB_CONFIG.TABLE_PRIORITIES} 
+            SET name = ?, color = ?, position = ?, auto_reset_on_complete = ? 
+            WHERE id = ?`;
         const params = [
             priority.name,
             priority.color,
             priority.position || DB_CONFIG.DEFAULT_POSITION,
+            priority.autoResetOnComplete ? 1 : 0,
             priority.id
         ];
         return new Promise((resolve, reject) => {

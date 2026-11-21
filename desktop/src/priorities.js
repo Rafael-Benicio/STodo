@@ -92,6 +92,30 @@ function createPriorityBadge(priorityId) {
 }
 
 /**
+ * Creates auto-reset checkbox enabling automatic uncheck when all tasks are complete.
+ * @param {Object} priority - Target priority entity.
+ * @returns {HTMLLabelElement} The created label containing checkbox.
+ * @example const label = createPriorityResetCheckbox(priority);
+ */
+function createPriorityResetCheckbox(priority) {
+    const label = document.createElement('label');
+    label.className = 'priority-reset-label';
+    label.title = 'Desmarcar todas automaticamente ao concluir todas as tarefas desta cor';
+
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'priority-reset-checkbox';
+    checkbox.checked = Boolean(priority.autoResetOnComplete);
+    checkbox.onchange = async () => {
+        priority.autoResetOnComplete = checkbox.checked;
+        await window.api.updatePriority(priority);
+    };
+
+    label.append(checkbox, document.createTextNode('Reset ao completar todas'));
+    return label;
+}
+
+/**
  * Creates single priority list item for the priorities tab.
  * @param {Object} priority - Priority entity.
  * @returns {HTMLElement} The created list item.
@@ -109,6 +133,7 @@ function createPriorityElement(priority) {
 
     li.appendChild(colorInput);
     li.appendChild(nameSpan);
+    li.appendChild(createPriorityResetCheckbox(priority));
     li.appendChild(createPriorityBadge(priority.id));
     li.appendChild(createPriorityDeleteButton(priority.id));
     return li;

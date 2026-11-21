@@ -1,7 +1,7 @@
 const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } = require('electron');
 const path = require('path');
 const TaskService = require('./service/taskService');
-const { PriorityRepository } = require('./db/database');
+const PriorityService = require('./service/priorityService');
 const logger = require('./logger');
 
 const APP_CONFIG = {
@@ -140,8 +140,14 @@ function stopExpirationChecker() {
 function registerTaskIpcHandlers() {
     ipcMain.handle('get-tasks', async () => await TaskService.getAllTasks());
     ipcMain.handle('add-task', async (event, task) => await TaskService.addTask(task));
-    ipcMain.handle('update-task', async (event, task) => await TaskService.updateTask(task));
     ipcMain.handle('delete-task', async (event, id) => await TaskService.deleteTask(id));
+    ipcMain.handle('update-task', async (event, task) => {
+        const result = await TaskService.updateTask(task);
+        if (result.batchResetCount > 0 && mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('tasks-auto-reset', result.batchResetCount);
+        }
+        return result.task;
+    });
 }
 
 /**
@@ -149,21 +155,10 @@ function registerTaskIpcHandlers() {
  * @example registerPriorityIpcHandlers();
  */
 function registerPriorityIpcHandlers() {
-    ipcMain.handle('get-priorities', async () => {
-        return await PriorityRepository.getAll();
-    });
-
-    ipcMain.handle('add-priority', async (event, priority) => {
-        return await PriorityRepository.insert(priority);
-    });
-
-    ipcMain.handle('update-priority', async (event, priority) => {
-        return await PriorityRepository.update(priority);
-    });
-
-    ipcMain.handle('delete-priority', async (event, id) => {
-        return await PriorityRepository.delete(id);
-    });
+    ipcMain.handle('get-priorities', async () => await PriorityService.getAllPriorities());
+    ipcMain.handle('add-priority', async (event, priority) => await PriorityService.addPriority(priority));
+    ipcMain.handle('update-priority', async (event, priority) => await PriorityService.updatePriority(priority));
+    ipcMain.handle('delete-priority', async (event, id) => await PriorityService.deletePriority(id));
 }
 
 app.on('ready', () => {
