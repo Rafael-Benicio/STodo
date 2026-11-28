@@ -6,6 +6,7 @@
     <title>STodo Desktop</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="modal.css">
+    <link rel="stylesheet" href="tracker.css">
 </head>
 <body>
     <div class="container">
@@ -20,6 +21,7 @@
             <button id="tabPending" class="active">Pendentes</button>
             <button id="tabCompleted">Concluídas</button>
             <button id="tabPriorities">Prioridades</button>
+            <button id="tabTracker">Séries</button>
             <select id="sortActionsSelect" class="sort-dropdown" title="Opções de ordenação">
                 <option value="" disabled selected>⚡ Organizar...</option>
                 <option value="shuffle">🔀 Aleatorizar</option>
@@ -46,6 +48,12 @@
                 <button id="addPriorityBtn">Adicionar Prioridade</button>
             </section>
 
+            <section class="tracker-input" id="trackerInputSection" style="display: none;">
+                <input type="text" id="trackerTitleInput" placeholder="Nome da série ou mídia...">
+                <input type="number" id="trackerEpisodeInput" value="0" min="0" title="Episódio inicial">
+                <button id="addTrackerBtn">Adicionar</button>
+            </section>
+
             <section class="task-list" id="taskListSection">
                 <ul id="tasks">
                     <!-- Tarefas aparecerão aqui -->
@@ -55,6 +63,12 @@
             <section class="priority-list" id="priorityListSection" style="display: none;">
                 <ul id="priorities">
                     <!-- Prioridades aparecerão aqui -->
+                </ul>
+            </section>
+
+            <section class="tracker-list" id="trackerListSection" style="display: none;">
+                <ul id="trackerList">
+                    <!-- Séries aparecerão aqui -->
                 </ul>
             </section>
         </main>
@@ -83,9 +97,42 @@
         </div>
     </div>
 
+    <div id="trackerModal" class="modal-overlay" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="trackerModalTitle">Configurações da Série</h3>
+                <button type="button" id="trackerModalCloseBtn" class="modal-close-btn" title="Fechar">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="modal-row">
+                    <span class="modal-label">📺 Episódio Atual:</span>
+                    <div class="tracker-modal-inline-form">
+                        <input type="number" id="trackerModalEpisodeInput" class="tracker-modal-input" min="0">
+                        <button type="button" id="trackerModalSaveBtn" class="tracker-modal-action-btn">Salvar</button>
+                    </div>
+                </div>
+                <div class="modal-row tracker-modal-column">
+                    <span class="modal-label">🔗 Links Associados:</span>
+                    <div class="tracker-modal-inline-form">
+                        <input type="text" id="trackerModalLinkLabel" class="tracker-modal-input" placeholder="Rótulo (opcional)">
+                        <input type="url" id="trackerModalLinkUrl" class="tracker-modal-input" placeholder="https://...">
+                        <button type="button" id="trackerModalAddLinkBtn" class="tracker-modal-action-btn">Adicionar</button>
+                    </div>
+                    <div id="trackerModalLinksList" class="tracker-modal-links-list"></div>
+                </div>
+                <div class="modal-row modal-danger-row">
+                    <span class="modal-label">Exclusão:</span>
+                    <button type="button" id="trackerModalDeleteBtn" class="modal-delete-btn">🗑️ Excluir Registro</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="autoUncheck.js"></script>
     <script src="priorities.js"></script>
     <script src="taskModal.js"></script>
+    <script src="trackerModal.js"></script>
+    <script src="tracker.js"></script>
     <script src="renderer.js"></script>
 </body>
 </html>

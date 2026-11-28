@@ -9,6 +9,7 @@ const DB_CONFIG = {
     FILE_NAME: 'stodo_desktop.db',
     TABLE_TASKS: 'tasks',
     TABLE_PRIORITIES: 'priorities',
+    TABLE_TRACKERS: 'episode_trackers',
     STATUS_DELETED: 1,
     STATUS_ACTIVE: 0,
     DEFAULT_MINUTES: 0,
@@ -50,6 +51,16 @@ db.serialize(() => {
         auto_reset_on_complete INTEGER DEFAULT 0
     )`);
     db.run(`ALTER TABLE ${DB_CONFIG.TABLE_PRIORITIES} ADD COLUMN auto_reset_on_complete INTEGER DEFAULT 0`, () => {});
+
+    db.run(`CREATE TABLE IF NOT EXISTS ${DB_CONFIG.TABLE_TRACKERS} (
+        id TEXT PRIMARY KEY,
+        title TEXT NOT NULL,
+        current_episode INTEGER DEFAULT 0,
+        links TEXT DEFAULT '[]',
+        position INTEGER DEFAULT 0,
+        created_at INTEGER,
+        updated_at INTEGER
+    )`);
 });
 
 /**
@@ -355,6 +366,7 @@ const PriorityRepository = {
 };
 
 module.exports = {
+    db,
     TaskRepository,
     PriorityRepository
 };

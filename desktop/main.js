@@ -1,7 +1,8 @@
-const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, shell } = require('electron');
 const path = require('path');
 const TaskService = require('./service/taskService');
 const PriorityService = require('./service/priorityService');
+const TrackerService = require('./service/trackerService');
 const logger = require('./logger');
 
 const APP_CONFIG = {
@@ -161,11 +162,27 @@ function registerPriorityIpcHandlers() {
     ipcMain.handle('delete-priority', async (event, id) => await PriorityService.deletePriority(id));
 }
 
+/**
+ * Registers IPC handlers for episode trackers and safe external link navigation.
+ * @example registerTrackerIpcHandlers();
+ */
+function registerTrackerIpcHandlers() {
+    ipcMain.handle('get-trackers', async () => await TrackerService.getAllTrackers());
+    ipcMain.handle('add-tracker', async (event, tracker) => await TrackerService.addTracker(tracker));
+    ipcMain.handle('update-tracker', async (event, tracker) => await TrackerService.updateTracker(tracker));
+    ipcMain.handle('delete-tracker', async (event, id) => await TrackerService.deleteTracker(id));
+    ipcMain.handle('open-external-link', async (event, rawUrl) => {
+        const validUrl = TrackerService.validateExternalUrl(rawUrl);
+        await shell.openExternal(validUrl);
+    });
+}
+
 app.on('ready', () => {
     createWindow();
     createTray();
     registerTaskIpcHandlers();
     registerPriorityIpcHandlers();
+    registerTrackerIpcHandlers();
     startExpirationChecker();
     logger.info('App', 'STodo Desktop initialized successfully.');
 });

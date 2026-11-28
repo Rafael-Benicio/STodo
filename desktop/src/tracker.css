@@ -1,0 +1,257 @@
+/* Episode tracker tab, controls, expandable links drawer, and modal styles */
+.tracker-input {
+    padding: 20px;
+    display: flex;
+    gap: 10px;
+    background-color: var(--input-bg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tracker-input input[type="text"] {
+    flex: 1;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    outline: none;
+    background-color: var(--surface-color);
+    color: var(--text-color);
+    transition: border-color 0.2s;
+}
+
+.tracker-input input[type="number"] {
+    width: 90px;
+    padding: 12px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-size: 1rem;
+    text-align: center;
+    outline: none;
+    background-color: var(--surface-color);
+    color: var(--text-color);
+}
+
+.tracker-input input:focus {
+    border-color: var(--primary-color);
+}
+
+.tracker-input button {
+    padding: 12px 24px;
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.tracker-input button:hover {
+    background-color: var(--primary-hover);
+}
+
+.tracker-item {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    cursor: default;
+}
+
+.tracker-main-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.tracker-options-btn {
+    flex-shrink: 0;
+    margin-left: -4px;
+}
+
+.tracker-counter-group {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 3px 6px;
+    flex-shrink: 0;
+}
+
+.tracker-step-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    border-radius: 6px;
+    background-color: var(--surface-color);
+    color: var(--primary-color);
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+body.dark-mode .tracker-step-btn {
+    color: #bb86fc;
+}
+
+.tracker-step-btn:hover {
+    background-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.tracker-episode-value {
+    min-width: 28px;
+    text-align: center;
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text-color);
+}
+
+.tracker-title-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 6px;
+    transition: background-color 0.15s;
+}
+
+.tracker-title-wrapper:hover {
+    background-color: var(--hover-bg);
+}
+
+.tracker-title {
+    font-size: 1.05rem;
+    font-weight: 500;
+}
+
+.tracker-links-drawer {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+    margin-left: 36px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+}
+
+.tracker-external-link-btn {
+    background-color: var(--surface-color);
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+    border-radius: 16px;
+    padding: 5px 12px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.15s, color 0.15s;
+}
+
+body.dark-mode .tracker-external-link-btn {
+    color: #bb86fc;
+    border-color: #bb86fc;
+}
+
+.tracker-external-link-btn:hover {
+    background-color: var(--primary-color);
+    color: #ffffff;
+}
+
+.tracker-empty-links {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+}
+
+.tracker-modal-column {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.tracker-modal-inline-form {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.tracker-modal-input {
+    flex: 1;
+    min-width: 110px;
+    padding: 8px 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background-color: var(--input-bg);
+    color: var(--text-color);
+    font-size: 0.9rem;
+    outline: none;
+}
+
+.tracker-modal-input:focus {
+    border-color: var(--primary-color);
+}
+
+.tracker-modal-action-btn {
+    padding: 8px 14px;
+    background-color: var(--primary-color);
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.tracker-modal-action-btn:hover {
+    background-color: var(--primary-hover);
+}
+
+.tracker-modal-links-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 150px;
+    overflow-y: auto;
+}
+
+.tracker-modal-link-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 6px 10px;
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+}
+
+.tracker-link-anchor {
+    background: none;
+    border: none;
+    color: var(--primary-color);
+    cursor: pointer;
+    font-size: 0.85rem;
+    text-align: left;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+body.dark-mode .tracker-link-anchor {
+    color: #bb86fc;
+}
+
+.tracker-link-anchor:hover {
+    text-decoration: underline;
+}

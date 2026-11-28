@@ -1,5 +1,5 @@
 const UI_CONFIG = {
-    TABS: { PENDING: 'pending', COMPLETED: 'completed', PRIORITIES: 'priorities' },
+    TABS: { PENDING: 'pending', COMPLETED: 'completed', PRIORITIES: 'priorities', TRACKER: 'tracker' },
     CLASS_DRAGGING: 'dragging',
     STORAGE_KEYS: { THEME: 'stodo_theme', ACTIVE_TAB: 'stodo_active_tab' },
     THEMES: { DARK: 'dark-mode', LIGHT: 'light-mode' }
@@ -19,12 +19,16 @@ const taskInputSection = document.getElementById('taskInputSection');
 const taskListSection = document.getElementById('taskListSection');
 const priorityInputSection = document.getElementById('priorityInputSection');
 const priorityListSection = document.getElementById('priorityListSection');
+const trackerInputSection = document.getElementById('trackerInputSection');
+const trackerListSection = document.getElementById('trackerListSection');
 
 const tabPending = document.getElementById('tabPending');
 const tabCompleted = document.getElementById('tabCompleted');
 const tabPriorities = document.getElementById('tabPriorities');
+const tabTracker = document.getElementById('tabTracker');
 const sortActionsSelect = document.getElementById('sortActionsSelect');
 const addPriorityBtn = document.getElementById('addPriorityBtn');
+const addTrackerBtn = document.getElementById('addTrackerBtn');
 
 let currentTab = UI_CONFIG.TABS.PENDING;
 let allTasks = [];
@@ -312,39 +316,40 @@ function renderTasks() {
 
 /**
  * Adjusts container visibility based on the active tab.
- * @param {boolean} isPriorities - Whether the priorities tab is selected.
- * @param {boolean} isPending - Whether the pending tab is selected.
- * @example updateTabContainers(false, true);
+ * @param {string} tabName - Currently selected tab identifier.
+ * @example updateTabContainers('tracker');
  */
-function updateTabContainers(isPriorities, isPending) {
+function updateTabContainers(tabName) {
+    const isPending = tabName === UI_CONFIG.TABS.PENDING;
+    const isPriorities = tabName === UI_CONFIG.TABS.PRIORITIES;
+    const isTracker = tabName === UI_CONFIG.TABS.TRACKER;
+    const isTasksTab = !isPriorities && !isTracker;
+
     taskInputSection.style.display = isPending ? 'flex' : 'none';
-    taskListSection.style.display = isPriorities ? 'none' : 'block';
+    taskListSection.style.display = isTasksTab ? 'block' : 'none';
     priorityInputSection.style.display = isPriorities ? 'flex' : 'none';
     priorityListSection.style.display = isPriorities ? 'block' : 'none';
-    sortActionsSelect.style.display = isPriorities ? 'none' : 'inline-block';
+    trackerInputSection.style.display = isTracker ? 'flex' : 'none';
+    trackerListSection.style.display = isTracker ? 'block' : 'none';
+    sortActionsSelect.style.display = isTasksTab ? 'inline-block' : 'none';
 }
 
 /**
- * Shifts tabs between Pending, Completed, and Priorities views.
- * @param {string} tabName - Target tab ('pending', 'completed', or 'priorities').
- * @example switchTab('priorities');
+ * Shifts tabs between Pending, Completed, Priorities, and Tracker views.
+ * @param {string} tabName - Target tab ('pending', 'completed', 'priorities', or 'tracker').
+ * @example switchTab('tracker');
  */
 function switchTab(tabName) {
     currentTab = tabName;
     sessionStorage.setItem(UI_CONFIG.STORAGE_KEYS.ACTIVE_TAB, tabName);
-    const isPending = tabName === UI_CONFIG.TABS.PENDING;
-    const isCompleted = tabName === UI_CONFIG.TABS.COMPLETED;
-    const isPriorities = tabName === UI_CONFIG.TABS.PRIORITIES;
+    tabPending.classList.toggle('active', tabName === UI_CONFIG.TABS.PENDING);
+    tabCompleted.classList.toggle('active', tabName === UI_CONFIG.TABS.COMPLETED);
+    tabPriorities.classList.toggle('active', tabName === UI_CONFIG.TABS.PRIORITIES);
+    tabTracker.classList.toggle('active', tabName === UI_CONFIG.TABS.TRACKER);
 
-    tabPending.classList.toggle('active', isPending);
-    tabCompleted.classList.toggle('active', isCompleted);
-    tabPriorities.classList.toggle('active', isPriorities);
-
-    updateTabContainers(isPriorities, isPending);
-    if (isPriorities) {
-        renderPriorities();
-        return;
-    }
+    updateTabContainers(tabName);
+    if (tabName === UI_CONFIG.TABS.PRIORITIES) return renderPriorities();
+    if (tabName === UI_CONFIG.TABS.TRACKER) return renderTrackers();
     renderTasks();
 }
 
@@ -445,12 +450,17 @@ themeToggle.onclick = toggleTheme;
 tabPending.onclick = () => switchTab(UI_CONFIG.TABS.PENDING);
 tabCompleted.onclick = () => switchTab(UI_CONFIG.TABS.COMPLETED);
 tabPriorities.onclick = () => switchTab(UI_CONFIG.TABS.PRIORITIES);
+tabTracker.onclick = () => switchTab(UI_CONFIG.TABS.TRACKER);
 sortActionsSelect.onchange = handleSortActionChange;
 addBtn.onclick = handleAddTask;
 addPriorityBtn.onclick = handleAddPriority;
+addTrackerBtn.onclick = handleAddTracker;
 taskInput.onkeypress = (e) => { if (e.key === 'Enter') handleAddTask(); };
 document.getElementById('priorityName').onkeypress = (e) => {
     if (e.key === 'Enter') handleAddPriority();
+};
+document.getElementById('trackerTitleInput').onkeypress = (e) => {
+    if (e.key === 'Enter') handleAddTracker();
 };
 
 // Drag over handling for reordering
@@ -472,8 +482,10 @@ taskList.addEventListener('dragover', (e) => {
 async function initializeApp() {
     initializeTheme();
     initTaskModal();
+    initTrackerModal();
     await loadPriorities();
     await loadTasks();
+    await loadTrackers();
     if (window.api.onTasksAutoReset) {
         window.api.onTasksAutoReset(() => loadTasks());
     }
