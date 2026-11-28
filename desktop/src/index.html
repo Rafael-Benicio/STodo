@@ -13,7 +13,15 @@
         <header>
             <div class="header-content">
                 <h1>STodo Desktop</h1>
-                <button id="themeToggle" title="Toggle Dark Mode">🌙</button>
+                <div class="header-actions">
+                    <select id="sortActionsSelect" class="sort-dropdown" title="Opções de ordenação">
+                        <option value="" disabled selected>⚡ Organizar...</option>
+                        <option value="shuffle">🔀 Aleatorizar</option>
+                        <option value="checks">📊 Ordenar por Checks</option>
+                        <option value="color">🎨 Agrupar por Cor</option>
+                    </select>
+                    <button id="themeToggle" title="Toggle Dark Mode">🌙</button>
+                </div>
             </div>
         </header>
 
@@ -22,12 +30,6 @@
             <button id="tabCompleted">Concluídas</button>
             <button id="tabPriorities">Prioridades</button>
             <button id="tabTracker">Séries</button>
-            <select id="sortActionsSelect" class="sort-dropdown" title="Opções de ordenação">
-                <option value="" disabled selected>⚡ Organizar...</option>
-                <option value="shuffle">🔀 Aleatorizar</option>
-                <option value="checks">📊 Ordenar por Checks</option>
-                <option value="color">🎨 Agrupar por Cor</option>
-            </select>
         </nav>
 
         <main>

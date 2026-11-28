@@ -54,6 +54,12 @@ header {
     align-items: center;
 }
 
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 header h1 {
     margin: 0;
     font-size: 1.5rem;
@@ -113,42 +119,27 @@ body.dark-mode .tabs button.active {
 }
 
 .sort-dropdown {
-    background-color: var(--surface-color);
-    color: var(--primary-color);
-    border: 1px solid var(--primary-color);
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.35);
     border-radius: 20px;
-    padding: 6px 16px;
+    padding: 8px 14px;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
-    margin-right: 15px;
-    margin-left: 10px;
     outline: none;
-    transition: all 0.2s ease-in-out;
+    transition: background 0.2s, border-color 0.2s;
 }
 
 .sort-dropdown:hover,
 .sort-dropdown:focus {
-    background-color: var(--primary-color);
-    color: white;
-    box-shadow: 0 2px 6px rgba(98, 0, 238, 0.2);
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.6);
 }
 
 .sort-dropdown option {
     background-color: var(--surface-color);
     color: var(--text-color);
-}
-
-body.dark-mode .sort-dropdown {
-    color: #bb86fc;
-    border-color: #bb86fc;
-}
-
-body.dark-mode .sort-dropdown:hover,
-body.dark-mode .sort-dropdown:focus {
-    background-color: #bb86fc;
-    color: #121212;
-    box-shadow: 0 2px 6px rgba(187, 134, 252, 0.2);
 }
 
 
