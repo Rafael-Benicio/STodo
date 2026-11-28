@@ -54,7 +54,7 @@ function createTrackerStepButton(symbol, title, onClick) {
 }
 
 /**
- * Creates the episode counter group (-, number, +) positioned on the left side.
+ * Creates the episode counter group (-, number, +) positioned on the right side.
  * @param {Object} tracker - Target tracker item.
  * @returns {HTMLElement} Counter controls container.
  * @example const controls = createTrackerCounterControls(tracker);
@@ -199,7 +199,7 @@ function createTrackerElement(tracker) {
     const counterControls = createTrackerCounterControls(tracker);
     const titleEl = createTrackerTitleElement(tracker, linksDrawer);
 
-    mainRow.append(optionsBtn, counterControls, titleEl);
+    mainRow.append(optionsBtn, titleEl, counterControls);
     li.append(mainRow, linksDrawer);
     return li;
 }

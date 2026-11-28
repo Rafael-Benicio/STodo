@@ -80,6 +80,7 @@
     border-radius: 8px;
     padding: 3px 6px;
     flex-shrink: 0;
+    margin-left: auto;
 }
 
 .tracker-step-btn {
