@@ -82,16 +82,19 @@ function renderTrackerModalLinks(tracker) {
 }
 
 /**
- * Saves the directly typed episode number from the modal input.
- * @example await handleSaveTrackerValue();
+ * Saves the updated tracker title and episode number from the modal inputs.
+ * @example await handleSaveTrackerDetails();
  */
-async function handleSaveTrackerValue() {
+async function handleSaveTrackerDetails() {
     if (!activeModalTracker) return;
-    const input = document.getElementById('trackerModalEpisodeInput');
-    const parsed = parseInt(input.value, 10);
-    if (Number.isNaN(parsed) || parsed < TRACKER_UI_CONFIG.MIN_EPISODE) return;
+    const titleInput = document.getElementById('trackerModalTitleInput');
+    const episodeInput = document.getElementById('trackerModalEpisodeInput');
+    const title = titleInput.value.trim();
+    const parsedEpisode = parseInt(episodeInput.value, 10);
+    if (!title || Number.isNaN(parsedEpisode) || parsedEpisode < TRACKER_UI_CONFIG.MIN_EPISODE) return;
 
-    activeModalTracker.currentEpisode = parsed;
+    activeModalTracker.title = title;
+    activeModalTracker.currentEpisode = parsedEpisode;
     await window.api.updateTracker(activeModalTracker);
     await loadTrackers();
     closeTrackerModal();
@@ -137,6 +140,7 @@ async function handleDeleteModalTracker() {
 function openTrackerModal(tracker) {
     activeModalTracker = { ...tracker, links: [...(tracker.links || [])] };
     document.getElementById('trackerModalTitle').innerText = tracker.title;
+    document.getElementById('trackerModalTitleInput').value = tracker.title;
     document.getElementById('trackerModalEpisodeInput').value = tracker.currentEpisode;
     document.getElementById('trackerModalLinkUrl').value = '';
     document.getElementById('trackerModalLinkLabel').value = '';
@@ -151,8 +155,11 @@ function openTrackerModal(tracker) {
 function initTrackerModal() {
     const modal = document.getElementById('trackerModal');
     if (!modal) return;
+    const handleEnter = (e) => { if (e.key === 'Enter') handleSaveTrackerDetails(); };
     document.getElementById('trackerModalCloseBtn').onclick = closeTrackerModal;
-    document.getElementById('trackerModalSaveBtn').onclick = handleSaveTrackerValue;
+    document.getElementById('trackerModalSaveBtn').onclick = handleSaveTrackerDetails;
+    document.getElementById('trackerModalTitleInput').onkeypress = handleEnter;
+    document.getElementById('trackerModalEpisodeInput').onkeypress = handleEnter;
     document.getElementById('trackerModalAddLinkBtn').onclick = handleAddTrackerModalLink;
     document.getElementById('trackerModalDeleteBtn').onclick = handleDeleteModalTracker;
     modal.onclick = (e) => { if (e.target === modal) closeTrackerModal(); };
